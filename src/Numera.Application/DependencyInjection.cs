@@ -11,6 +11,8 @@ public static class DependencyInjection
         services.AddSingleton<CredentialVerifier>();
         services.AddScoped<LoginHandler>();
         services.AddScoped<GetImportJobHandler>();
+        services.AddScoped<GetImportErrorsHandler>();
+        services.AddScoped<ListImportJobsHandler>();
         return services;
     }
 }
