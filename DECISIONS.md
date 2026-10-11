@@ -231,4 +231,26 @@ One entry per meaningful decision. Format: context, decision, alternatives, trad
 - The API's launch profile uses port 5080, matching the Angular dev proxy, so `dotnet run` and `npm start` work together without extra flags (previously the profile used 5131).
 - `.gitattributes` normalizes text files to LF (matching `.editorconfig`) and keeps CSV fixtures byte-exact.
 
-_Add new decisions below as D032, D033, ..._
+## D032: Metrics are hand-written PostgreSQL behind a shared filter
+
+- **Context:** M06 needs summary, timeseries (with empty periods filled) and breakdown aggregates, all in SQL.
+- **Decision:**
+  - The KPI definitions, filter model, validation and period arithmetic live in `Numera.Application/Metrics` (pure, unit-tested). The SQL lives in `Numera.Infrastructure/Metrics`, following D024: it uses PostgreSQL features EF Core LINQ does not express cleanly (`FILTER`, `COUNT(DISTINCT ...)` per group, `generate_series` for empty periods, `date_trunc` on `date`).
+  - `OrderFilterSql` builds the WHERE clause; every value is a parameter (`= ANY(@array)` for lists). Column names and the date unit come from fixed switches, never from input.
+  - Revenue and orders count completed lines only, so metrics endpoints reject a `status` filter rather than silently ignoring it. Filters accept repeated values ("any of"), which costs little now and serves the grid's filters later.
+  - Rounding happens once, in C#, on exact sums (`MetricDefinitions`).
+  - Timeseries without dates spans the matching data. A request is capped at 1,000 points.
+  - `date_trunc` is applied to `timestamp`, not `timestamptz`, so the database session time zone cannot move dates between buckets.
+- **Alternatives:** EF Core LINQ `GroupBy` (no clean translation for filtered distinct counts and empty periods), a reporting view or materialized view (premature at this data size).
+
+## D033: Query plans and index findings on the 200,000-row seed
+
+Measured with `EXPLAIN (ANALYZE)` on the local Docker PostgreSQL 17 after `ANALYZE orders`:
+- **Date filters** use `ix_orders_order_date`: one month runs in about 8 ms, one week plus a region in under 1 ms.
+- **Region-only filters** use a bitmap scan on `ix_orders_region` (about 18 ms for Latin America, about 9% of rows). The low-cardinality indexes (region, channel, category) help for selective values only; broad filters fall back to scans, as expected.
+- **Whole-table summary:** about 86 ms. The planner walks `ux_orders_order_id_product_sku` so that `COUNT(DISTINCT order_id)` needs no sort.
+- **Per-group distinct counts:** `COUNT(DISTINCT order_id)` per group sorted. Aggregating per (group, order) first and then per group measured 182 ms to 133 ms (median of 5) for a one-year category breakdown, with identical results, so the breakdown uses that form. The same rewrite was slower for the summary (86 to 134 ms) and the day series (141 to 177 ms), so those keep `COUNT(DISTINCT ...)`.
+- `ix_orders_status` was not used by any metrics query; it stays for the grid (M08) and will be re-checked there.
+- No index changes in M06.
+
+_Add new decisions below as D034, D035, ..._
