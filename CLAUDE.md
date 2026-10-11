@@ -1,4 +1,4 @@
-# Numera: Rules for AI Coding Agents
+﻿# Numera: Rules for AI Coding Agents
 
 Read this file and `docs/SPEC.md` at the start of every session. They are the source of truth. If a request conflicts with them, stop and ask.
 
@@ -43,7 +43,7 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 - Build web: `npm run build` (in `web/`)
 - Test web: `npm test -- --watch=false` (in `web/`)
 - Run web: `npm start` (in `web/`, serves on http://localhost:4200)
-- Start PostgreSQL: `docker compose up -d` (copy `.env.example` to `.env` first; not yet verified because the Docker daemon was not running in M01)
+- Start PostgreSQL: `docker compose up -d` (copy `.env.example` to `.env` first; verified: container reports healthy)
 - Run everything: start PostgreSQL, then run the API and the web app in two terminals
 
 ## Working rules

@@ -1,4 +1,4 @@
-# Numera Progress
+﻿# Numera Progress
 
 Update this file at the end of every milestone. Only record results that were actually verified.
 
@@ -6,7 +6,7 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 
 | # | Milestone | Est. sessions | Status | Verified on | Notes |
 |---|---|---|---|---|---|
-| M01 | Repo, tooling, API skeleton, CI, Angular shell | 2 | partial | 2026-10-11 | API/web build and tests verified locally. PostgreSQL via compose and the CI run not verified (Docker daemon not running; repo not pushed). |
+| M01 | Repo, tooling, API skeleton, CI, Angular shell | 2 | complete locally | 2026-10-11 | API/web build and tests and `docker compose up -d` (PostgreSQL healthy) verified. CI run not yet verified: no git remote configured. |
 | M02 | Database schema and seed generator | 2 | not started | | |
 | M03 | Authentication (JWT, demo user) | 1 | not started | | |
 | M04 | CSV import: upload and validation | 3 | not started | | |
@@ -30,12 +30,11 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Known issues
 
-- `docker compose up -d` has not been run: the Docker daemon was not running. Only `docker compose config` was validated.
-- The GitHub Actions workflow has not run; confirm after the first push.
+- The GitHub Actions workflow has not run; no git remote is configured yet. Confirm after the first push.
 - Navigation between pages was verified by a component test and by the dev server returning the app, not by clicking in a real browser.
 - Global `ng` on this machine is v11; use the local CLI via `npm start` / `npm run build` in `web/`.
 - `ng serve` blocks on an analytics prompt in non-interactive shells; set `NG_CLI_ANALYTICS=false`.
 
 ## Next step
 
-Start Docker Desktop and run `docker compose up -d`, push to GitHub to confirm CI, commit M01, then M02.
+Add a GitHub remote and push `dev` to confirm CI is green, then start M02 (database schema and seed generator) on a new `#0001-` branch.
