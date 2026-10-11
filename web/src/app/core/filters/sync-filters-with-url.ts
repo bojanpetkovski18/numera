@@ -49,7 +49,8 @@ export function syncFiltersWithUrl(
     const all = toQueryParams(filters.filter());
     const queryParams = { ...(includeGranularity ? all : { ...all, granularity: null }), ...pageParams() };
     untracked(() => {
-      void router.navigate([], { relativeTo: route, queryParams, queryParamsHandling: 'merge', replaceUrl: true });
+      // scroll: 'manual' keeps the page where it is: this only records the state of the page being looked at.
+      void router.navigate([], { relativeTo: route, queryParams, queryParamsHandling: 'merge', replaceUrl: true, scroll: 'manual' });
     });
   });
 }
