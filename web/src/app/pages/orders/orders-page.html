@@ -1,5 +1,5 @@
 <header class="page-header">
-  <a class="back" routerLink="/dashboard" [queryParams]="dashboardParams()">
+  <a class="back-link" routerLink="/dashboard" [queryParams]="dashboardParams()">
     <span aria-hidden="true">←</span> Back to dashboard
   </a>
   <h1>Orders</h1>
@@ -51,7 +51,10 @@
       emptyText="No filters: showing every order line"
       (remove)="removeChip(chips()[$event])"
     />
-    <p class="summary" aria-live="polite">{{ rangeText() }}</p>
+    <div class="grid-head">
+      <p class="summary" aria-live="polite">{{ rangeText() }}</p>
+      <app-export-button [params]="exportParams()" [rowCount]="shown()?.totalCount ?? null" />
+    </div>
     @if (orders.isLoading() && shown()) {
       <div class="progress" aria-hidden="true"></div>
     }

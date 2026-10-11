@@ -229,7 +229,7 @@ describe('OrdersPage', () => {
         '2025-03-31', '2025-04-06', ['Europe'], ['completed'],
       ]);
       expect(chipTexts()).toEqual(['Date: Mar 31, 2025 – Apr 6, 2025', 'Region: Europe', 'Status: Completed']);
-      expect(root().querySelector('a.back')?.getAttribute('href')).toBe('/dashboard?from=2025-03-31&to=2025-04-06&region=Europe');
+      expect(root().querySelector('a.back-link')?.getAttribute('href')).toBe('/dashboard?from=2025-03-31&to=2025-04-06&region=Europe');
     });
 
     it('removing a chip drops that filter, starts from page 1 and keeps the focus nearby', async () => {
@@ -283,12 +283,31 @@ describe('OrdersPage', () => {
     });
   });
 
+  it('Export CSV asks for exactly the rows the grid shows: same filters, status, search and sort, every page', async () => {
+    await open('/orders?region=Europe&preset=last30&status=refunded&q=HP-01&sort=lineTotal&dir=desc&page=3&pageSize=50');
+    const grid = ordersRequest();
+    grid.flush(page([row(1)], 120, 3, 50));
+    await settle(fixture);
+
+    button('Export CSV').click();
+    await settle(fixture);
+
+    const exportRequest = http.expectOne((r) => r.url === '/api/orders/export');
+    const gridParams = grid.request.params;
+    const params = exportRequest.request.params;
+    for (const key of ['region', 'from', 'to', 'status', 'q', 'sort', 'dir']) {
+      expect([key, params.getAll(key)]).toEqual([key, gridParams.getAll(key)]);
+    }
+    expect([params.has('page'), params.has('pageSize')]).toEqual([false, false]);
+    exportRequest.flush(new Blob(['x']));
+  });
+
   it('without filters, says the grid shows every order line', async () => {
     await open('/orders');
     await respond(page([row(1)], 1));
 
     expect(root().querySelector('app-filter-chips')?.textContent?.trim()).toBe('No filters: showing every order line');
-    expect(root().querySelector('a.back')?.getAttribute('href')).toBe('/dashboard');
+    expect(root().querySelector('a.back-link')?.getAttribute('href')).toBe('/dashboard');
   });
 
   it('keeps the filters chosen on the dashboard when opened from the menu', async () => {

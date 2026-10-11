@@ -1,5 +1,5 @@
 import { convertToParamMap } from '@angular/router';
-import { DEFAULT_GRID, GridState, effectiveSort, gridApiParams, gridFromQueryParams, gridToQueryParams, nextSort } from './grid-state';
+import { DEFAULT_GRID, GridState, effectiveSort, gridApiParams, gridExportParams, gridFromQueryParams, gridToQueryParams, nextSort } from './grid-state';
 
 function roundTrip(state: GridState): GridState {
   const query = Object.fromEntries(
@@ -47,6 +47,16 @@ describe('grid state', () => {
     expect(gridApiParams({ statuses: ['refunded'], q: 'x', sort: 'quantity', dir: 'asc', page: 2, pageSize: 100 })).toEqual({
       page: '2',
       pageSize: '100',
+      status: ['refunded'],
+      q: 'x',
+      sort: 'quantity',
+      dir: 'asc',
+    });
+  });
+
+  it('export params are the API params without paging', () => {
+    expect(gridExportParams(DEFAULT_GRID)).toEqual({});
+    expect(gridExportParams({ statuses: ['refunded'], q: 'x', sort: 'quantity', dir: 'asc', page: 2, pageSize: 100 })).toEqual({
       status: ['refunded'],
       q: 'x',
       sort: 'quantity',

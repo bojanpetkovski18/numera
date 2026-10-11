@@ -197,3 +197,11 @@ h3 {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.back-link {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}

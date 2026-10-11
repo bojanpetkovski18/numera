@@ -97,6 +97,12 @@ export function gridApiParams(state: GridState): Record<string, string | string[
   return params;
 }
 
+/** /api/orders/export parameters: the grid's search, status and sort without paging, so the file holds every page. */
+export function gridExportParams(state: GridState): Record<string, string | string[]> {
+  const { page: _page, pageSize: _pageSize, ...rest } = gridApiParams(state);
+  return rest;
+}
+
 export function sameGrid(a: GridState, b: GridState): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
