@@ -1,4 +1,7 @@
 <header class="page-header">
+  <a class="back" routerLink="/dashboard" [queryParams]="dashboardParams()">
+    <span aria-hidden="true">←</span> Back to dashboard
+  </a>
   <h1>Orders</h1>
   <p>Every order line, filtered with the same filters as the dashboard.</p>
 </header>
@@ -42,6 +45,12 @@
 
   <section class="card grid-card" aria-labelledby="grid-title" [attr.aria-busy]="orders.isLoading()">
     <h2 id="grid-title" class="visually-hidden">Order lines</h2>
+    <app-filter-chips
+      class="active-filters"
+      [chips]="chipLabels()"
+      emptyText="No filters: showing every order line"
+      (remove)="removeChip(chips()[$event])"
+    />
     <p class="summary" aria-live="polite">{{ rangeText() }}</p>
     @if (orders.isLoading() && shown()) {
       <div class="progress" aria-hidden="true"></div>
@@ -63,7 +72,15 @@
       @if (page.totalCount === 0) {
         <div class="state">
           <p>No orders match these filters.</p>
-          <button type="button" class="btn" (click)="clearAll()">Clear search and filters</button>
+          @if (grid().statuses.length) {
+            <p class="state-hint">Only {{ statusText() }} lines are shown. Lines with another status may still match.</p>
+          }
+          <div class="state-actions">
+            @if (grid().statuses.length) {
+              <button type="button" class="btn" (click)="showAllStatuses()">Show all statuses</button>
+            }
+            <button type="button" class="btn" (click)="clearAll()">Clear search and filters</button>
+          </div>
         </div>
       } @else {
         <div class="table-wrap" [class.stale]="orders.isLoading()" tabindex="0" role="region" aria-labelledby="grid-title">

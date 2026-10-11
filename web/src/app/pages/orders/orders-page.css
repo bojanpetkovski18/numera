@@ -9,6 +9,16 @@
   margin: var(--space-2) 0 var(--space-5);
   color: var(--color-muted);
 }
+.back {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+.active-filters {
+  margin: 0 var(--space-4) var(--space-2);
+}
 .layout {
   display: grid;
   gap: var(--space-4);
@@ -171,6 +181,15 @@ tbody tr:hover td {
 }
 .state {
   margin: 0 var(--space-4) var(--space-4);
+}
+.state p {
+  margin: 0;
+}
+.state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
 }
 
 /* Phones: rows become cards; sorting moves to the select in the toolbar. */
