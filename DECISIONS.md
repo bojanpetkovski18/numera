@@ -172,4 +172,28 @@ One entry per meaningful decision. Format: context, decision, alternatives, trad
 - **Decision:** `CsvHelper` is used through `CsvParser` (not the object mapper), with a header index built by `HeaderEvaluation`, so the pure rules in `Numera.Application` are unit-testable without a file or database. The streaming reader, scanner and import handler live in `Numera.Infrastructure` because they depend on CsvHelper and PostgreSQL `COPY`; this is an exception to D003/D014 for I/O-bound handlers.
 - **Trade-offs:** The file is read twice (scan, then load). Parsing 100,000 rows is cheap compared with rolling back a database transaction for a file that was over the limit anyway.
 
-_Add new decisions below as D025, D026, ..._
+## D025: Error report format and the import history endpoint
+
+- **Context:** M05 needs a downloadable report and a recent-imports list.
+- **Decision:**
+  - `GET /api/imports/{id}/errors.csv` streams one line per `import_errors` row, in row order: `row_number,field,message,raw_row`. `raw_row` is the original row as a single quoted cell (the stored value), so the report matches the table exactly. It is UTF-8 with a BOM so Excel reads it correctly, with CRLF line endings.
+  - An import with no rejects returns just the header row; an unknown id returns a 404 problem.
+  - `GET /api/imports?limit=N` (default 20, maximum 100) lists recent jobs, newest first. This is an addition to the API draft, needed by the history panel.
+- **Alternatives:** Splitting `raw_row` back into the 11 original columns (needs the uploaded header, which is not stored).
+- **Trade-offs:** The original values are in one cell, not in separate columns.
+
+## D026: CSV injection guard is shared and prefixes with an apostrophe
+
+- **Decision:** `CsvCell` (Application) quotes cells per RFC 4180 and prefixes any text cell that starts with `=`, `+`, `-`, `@`, tab or carriage return with `'`, which spreadsheet programs display as plain text. It is applied to every text cell of the error report and is the helper the M10 export will reuse. The stored data is never altered; only the exported file is.
+- **Trade-offs:** A legitimate value such as `-5` in a text cell appears as `'-5` in the file. Numeric cells (row numbers) are written as plain numbers.
+
+## D027: SignalStore for shared import state, authenticated downloads through the HTTP client
+
+- **Decision:**
+  - `@ngrx/signals` `ImportStore` (root-provided) holds the upload phase and progress, the last result, recent history and a `completedImportCount` that other screens (dashboard, grid) can watch to refresh after an import. Component-local UI state (drag-over, download in progress) stays in component signals.
+  - The error report is fetched through `HttpClient` as a blob and saved with a small `FileSaver` service, because a plain link cannot send the bearer token. `FileSaver` is a service so tests can replace the browser-only code.
+  - Client-side checks (extension, empty, over 10 MB) are a convenience; the server stays authoritative.
+  - API problem details (`detail`, then `title`) are shown to the user as written.
+- **Trade-offs:** The whole report is held in the browser as a blob before saving, which is fine for at most 100,000 error lines of 2,000 characters.
+
+_Add new decisions below as D028, D029, ..._
