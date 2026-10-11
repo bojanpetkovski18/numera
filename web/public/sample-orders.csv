@@ -1,0 +1,6 @@
+order_id,order_date,customer_id,region,channel,product_sku,product_category,quantity,unit_price,discount,status
+SAMPLE-0001,2025-03-01,C-00001,Europe,Online Store,HP-SO-ETH,Single Origin,2,18.50,0.05,completed
+SAMPLE-0001,2025-03-01,C-00001,Europe,Online Store,HP-AC-MUG,Accessories,1,18.00,0,completed
+SAMPLE-0002,2025-03-02,C-00002,North America,Mobile App,HP-BL-HAR,Blends,1,14.00,0,refunded
+SAMPLE-0003,2025-03-03,C-00003,Asia-Pacific,Marketplace,HP-EQ-GRN,Equipment,1,89.00,0.10,completed
+SAMPLE-0004,2025-03-04,C-00004,Latin America,Wholesale,HP-SB-M01,Subscriptions,12,16.00,0.15,cancelled

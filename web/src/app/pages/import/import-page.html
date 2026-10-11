@@ -1,0 +1,190 @@
+<header class="page-header">
+  <h1>Import</h1>
+  <p>Upload a sales CSV. Valid rows are imported; rejected rows are listed in a downloadable report.</p>
+</header>
+
+<section
+  class="dropzone"
+  [class.dragging]="dragging()"
+  [class.busy]="busy()"
+  aria-labelledby="dropzone-title"
+  (dragover)="onDragOver($event)"
+  (dragleave)="dragging.set(false)"
+  (drop)="onDrop($event)"
+>
+  <h2 id="dropzone-title">Drop a CSV file here</h2>
+  <p class="hint">or</p>
+  <input
+    id="file-input"
+    class="file-input"
+    type="file"
+    accept=".csv,text/csv"
+    [disabled]="busy()"
+    (change)="onFileInput($event)"
+  />
+  <label class="button primary" for="file-input">Choose file</label>
+  <p class="hint">.csv, up to 10 MB and 100,000 rows.</p>
+  <p class="hint">
+    <a href="sample-orders.csv" download>Download a sample CSV</a>
+  </p>
+</section>
+
+<details class="format">
+  <summary>Expected format</summary>
+  <p>
+    The first row must contain these column names (any order, any letter case):
+    <code>order_id, order_date, customer_id, region, channel, product_sku, product_category, quantity, unit_price,
+    discount, status</code>.
+  </p>
+  <ul>
+    <li><strong>order_date</strong>: <code>yyyy-MM-dd</code>, not in the future</li>
+    <li><strong>quantity</strong>: a whole number greater than 0</li>
+    <li><strong>unit_price</strong>: at least 0, up to 2 decimals; <strong>discount</strong>: 0 to 1</li>
+    <li><strong>status</strong>: completed, refunded or cancelled</li>
+    <li>An order_id and product_sku pair may appear only once, and is skipped if it was already imported.</li>
+    <li>Unknown columns are ignored with a warning.</li>
+  </ul>
+</details>
+
+<div class="live" aria-live="polite">
+  @switch (store.phase()) {
+    @case ('uploading') {
+      <section class="panel" aria-label="Upload progress">
+        <p><strong>Uploading {{ store.fileName() }}…</strong> {{ store.progress() }}%</p>
+        <progress max="100" [value]="store.progress()" aria-label="Upload progress"></progress>
+      </section>
+    }
+    @case ('processing') {
+      <section class="panel" aria-label="Processing">
+        <p><strong>Processing {{ store.fileName() }}…</strong> Validating rows and importing.</p>
+        <progress aria-label="Processing"></progress>
+      </section>
+    }
+    @case ('failed') {
+      <section class="panel error" role="alert" aria-label="Import failed">
+        <h2>Import failed</h2>
+        <p>{{ store.errorMessage() }}</p>
+        @if (store.fileName(); as name) {
+          <p class="meta">File: {{ name }}</p>
+        }
+      </section>
+    }
+    @case ('done') {
+      @if (store.result(); as job) {
+        <section
+          class="panel"
+          [class.success]="resultKind() === 'success'"
+          [class.partial]="resultKind() === 'partial'"
+          [class.error]="resultKind() === 'nothing-imported'"
+          aria-label="Import result"
+        >
+          @switch (resultKind()) {
+            @case ('success') {
+              <h2>Import complete</h2>
+              <p>Every row in {{ job.fileName }} was imported.</p>
+            }
+            @case ('partial') {
+              <h2>Imported with rejected rows</h2>
+              <p>Some rows in {{ job.fileName }} did not pass validation and were skipped.</p>
+            }
+            @default {
+              <h2>No rows were imported</h2>
+              <p>Every row in {{ job.fileName }} was rejected.</p>
+            }
+          }
+
+          <dl class="counts">
+            <div>
+              <dt>Rows read</dt>
+              <dd>{{ job.totalRows | number }}</dd>
+            </div>
+            <div>
+              <dt>Imported</dt>
+              <dd>{{ job.importedRows | number }}</dd>
+            </div>
+            <div>
+              <dt>Rejected</dt>
+              <dd>{{ job.rejectedRows | number }}</dd>
+            </div>
+            <div>
+              <dt>Warnings</dt>
+              <dd>{{ job.warnings.length | number }}</dd>
+            </div>
+          </dl>
+
+          @if (job.warnings.length > 0) {
+            <ul class="warnings">
+              @for (warning of job.warnings; track warning) {
+                <li>{{ warning }}</li>
+              }
+            </ul>
+          }
+
+          @if (job.rejectedRows > 0) {
+            <button
+              type="button"
+              class="button primary"
+              [disabled]="downloadingId() === job.id"
+              (click)="downloadErrorReport(job)"
+            >
+              {{ downloadingId() === job.id ? 'Preparing report…' : 'Download error report' }}
+            </button>
+          }
+        </section>
+      }
+    }
+  }
+</div>
+
+@if (downloadError(); as message) {
+  <p class="panel error" role="alert">{{ message }}</p>
+}
+
+<section class="history" aria-labelledby="history-title">
+  <h2 id="history-title">Recent imports</h2>
+
+  @switch (store.historyStatus()) {
+    @case ('loading') {
+      <p class="status" role="status">Loading import history…</p>
+    }
+    @case ('error') {
+      <div class="panel error" role="alert">
+        <p>The import history could not be loaded.</p>
+        <button type="button" class="button" (click)="retryHistory()">Try again</button>
+      </div>
+    }
+    @default {
+      @if (store.history().length === 0) {
+        <p class="status empty">No imports yet. Upload a CSV to get started.</p>
+      } @else {
+        <ul class="history-list">
+          @for (job of store.history(); track job.id) {
+            <li class="history-item">
+              <div class="history-main">
+                <strong class="file-name">{{ job.fileName }}</strong>
+                <span class="meta">{{ job.createdAt | date: 'medium' }}</span>
+              </div>
+              <span class="badge" [class]="'badge ' + job.status">{{ job.status }}</span>
+              <span class="numbers">
+                {{ job.importedRows | number }} imported · {{ job.rejectedRows | number }} rejected
+              </span>
+              @if (job.failureReason) {
+                <span class="meta reason">{{ job.failureReason }}</span>
+              }
+              @if (job.rejectedRows > 0) {
+                <button
+                  type="button"
+                  class="button small"
+                  [disabled]="downloadingId() === job.id"
+                  (click)="downloadErrorReport(job)"
+                >
+                  Download error report
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>
