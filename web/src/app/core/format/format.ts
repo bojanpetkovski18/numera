@@ -35,6 +35,13 @@ export function formatPercent(fraction: number): string {
   return percent.format(fraction);
 }
 
+const discount = new Intl.NumberFormat(LOCALE, { style: 'percent', minimumFractionDigits: 0, maximumFractionDigits: 1 });
+
+/** A discount fraction without trailing zeros: 0.05 becomes 5%, 0.333 becomes 33.3%. */
+export function formatDiscount(fraction: number): string {
+  return discount.format(fraction);
+}
+
 /** Parses yyyy-MM-dd as a local calendar date. */
 export function parseIsoDate(value: string): Date {
   const [year, month, day] = value.split('-').map(Number);

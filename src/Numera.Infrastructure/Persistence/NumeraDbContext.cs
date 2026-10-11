@@ -15,6 +15,8 @@ public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // pg_trgm backs the case-insensitive order_id "contains" search in the orders grid.
+        modelBuilder.HasPostgresExtension("pg_trgm");
         modelBuilder.Entity<Order>(ConfigureOrder);
         modelBuilder.Entity<ImportJob>(ConfigureImportJob);
         modelBuilder.Entity<ImportError>(ConfigureImportError);
@@ -56,6 +58,10 @@ public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) 
         b.HasIndex(o => o.ProductCategory).HasDatabaseName("ix_orders_product_category");
         b.HasIndex(o => o.Status).HasDatabaseName("ix_orders_status");
         b.HasIndex(o => o.ImportJobId).HasDatabaseName("ix_orders_import_job_id");
+        b.HasIndex(o => o.OrderId)
+            .HasMethod("gin")
+            .HasOperators("gin_trgm_ops")
+            .HasDatabaseName("ix_orders_order_id_trgm");
 
         b.HasOne<ImportJob>().WithMany().HasForeignKey(o => o.ImportJobId).OnDelete(DeleteBehavior.SetNull);
     }

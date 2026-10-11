@@ -2,6 +2,7 @@ import {
   formatCompactCurrency,
   formatCurrency,
   formatDate,
+  formatDiscount,
   formatInteger,
   formatKpiCurrency,
   formatPercent,
@@ -25,6 +26,12 @@ describe('format helpers', () => {
     expect(formatCompactCurrency(1_250_000)).toBe('$1.3M');
     expect(formatCompactCurrency(482_884)).toBe('$482.9K');
     expect(formatCompactCurrency(0)).toBe('$0');
+  });
+
+  it('formats discounts without trailing zeros', () => {
+    expect(formatDiscount(0)).toBe('0%');
+    expect(formatDiscount(0.05)).toBe('5%');
+    expect(formatDiscount(0.333)).toBe('33.3%');
   });
 
   it('formats integers with grouping', () => {

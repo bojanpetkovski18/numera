@@ -280,4 +280,35 @@ Measured with `EXPLAIN (ANALYZE)` on the local Docker PostgreSQL 17 after `ANALY
 - The revenue chart's subtitle shows the period count and the best period, not a total. Summing per-period values that were each rounded to the cent drifts from the Revenue KPI by a few cents (seen in the browser: $10,376,613.91 by week, $10,376,615.58 by day, versus $10,376,613.65), which reads as an error.
 - Dark mode was skipped: the tokens would allow it, but the charts would also need a second color set. It is optional in the spec.
 
-_Add new decisions below as D037, D038, ..._
+## D037: Orders API: exact count, OFFSET paging, whitelisted sort
+
+- **Endpoint:** `GET /api/orders` takes the dashboard filters plus `status` (repeatable), `q`, `sort`, `dir`, `page` and `pageSize`. Like the metrics, it is hand-written, parameterized PostgreSQL in Infrastructure; the page and the count are two statements sent in one round trip.
+- **Sort:** only the twelve grid columns are accepted, through a fixed map from name to column (never interpolated from input). An unknown name gives 400. `id` is always the tie-breaker, so pages never overlap or skip rows on equal values. With no `sort`, the order is newest first. `sort` without `dir` is ascending.
+- **Page size:** 25 by default; 100 at most. A larger size is rejected with 400 rather than clamped, so a client never silently gets fewer rows than it asked for. A page past the end returns an empty list with the real total.
+- **Exact count on every request.** Measured with `EXPLAIN (ANALYZE)` on the 200,000-row seed: 12.9 ms unfiltered, 3.8 ms for a region, 0.9 ms for a month. That is cheap enough to give the user exact "1–25 of N" text and a last-page button. An estimate or a capped count would only pay off at much larger tables.
+- **OFFSET paging, not keyset.** Page 1 by date takes 0.4 ms; page 4,000 takes 42 ms; the last page takes 93 ms. Keyset paging would make deep pages cheaper but makes "jump to page N" and "last page" awkward for every sort column. Deep pages are rare in a grid that is filtered first, so OFFSET wins on simplicity at this size.
+- **Line total** is computed with the same `MetricDefinitions` rounding as revenue. With `status=completed`, the grid's total equals the summary's `completedLines` (checked by an integration test and in the browser).
+- `ix_orders_status` (see D033) is used by the grid's status filter: an index-only count of 0.4 ms for refunded and 6 ms for completed.
+
+## D038: Order ID search is a case-insensitive "contains" backed by a trigram index
+
+- `q` matches anywhere in the order ID (`ILIKE '%term%'`). `%`, `_` and `\` in the input are escaped, so they match literally. The term is capped at 40 characters. People remember fragments like "0123" more often than full IDs, so a prefix match would miss them.
+- A leading wildcard cannot use a B-tree index: the contains query took 20–24 ms as a scan. A `pg_trgm` GIN index (`ix_orders_order_id_trgm`, about 4 MB, migration `AddOrderIdSearchIndex`) brings terms of three or more characters down to 0.3–0.5 ms. Shorter terms still scan (about 24 ms), which is acceptable.
+- Search is limited to order IDs, as the spec says. Customer and SKU searches are out of scope.
+
+## D039: Grid state in the URL, with one URL writer per page
+
+- **Grid state:** status, search, sort, direction, page and page size live in the URL next to the shared filters, defaults omitted. A reload or a shared link restores the exact view. The state is local to the orders page (a signal, not NgRx), because nothing else reads it.
+- **One writer:** `syncFiltersWithUrl` is now the only code that writes the URL. Pages pass their own extra parameters to it. With two writers, two merge navigations in the same tick each started from the old URL and dropped the other's changes. The dashboard and grid share it, and the grid drops the dashboard-only `granularity` from its URL.
+- **Filters carry over:** arriving at a page with no filter parameters keeps the store's filters. Moving from the dashboard to the grid therefore keeps the region, channel, category and date range.
+- **Page reset:** a filter, status, search, sort or page-size change returns to page 1. For shared filters, this happens synchronously in a computed signal, so a stale page number is never requested.
+- **Search** is debounced by 300 ms. The search box is not part of the URL until the debounce fires.
+- **Loading:** the first load shows skeleton rows. Later loads keep the previous page dimmed under a progress bar, so the table does not jump.
+
+## D040: Grid layout: sticky header on wide screens, cards on phones
+
+- Twelve columns do not fit a phone. Under 700 px, each row becomes a labelled card (`data-label` on each cell), and sorting moves to a "Sort by" select. The table header stays in the accessibility tree, visually hidden, so screen readers still get table semantics.
+- On wider screens the table scrolls inside its card with a sticky header. At 1280 px with the sidebar open, the last columns scroll horizontally inside the table region; the region is focusable so keyboard users can scroll it. The page itself never scrolls sideways (checked at 1280, 768 and 375 px).
+- Sortable headers are buttons inside `th` elements that carry `aria-sort`, so screen readers announce the current sort and keyboard users can sort with Enter or Space.
+
+_Add new decisions below as D041, D042, ..._

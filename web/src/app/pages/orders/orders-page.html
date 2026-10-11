@@ -1,0 +1,122 @@
+<header class="page-header">
+  <h1>Orders</h1>
+  <p>Every order line, filtered with the same filters as the dashboard.</p>
+</header>
+
+<div class="layout">
+  <app-filter-bar />
+
+  <div class="card toolbar">
+    <div class="field search">
+      <label for="g-search">Search order ID</label>
+      <input
+        id="g-search"
+        type="search"
+        inputmode="search"
+        autocomplete="off"
+        placeholder="e.g. HP-0123 or 0123"
+        maxlength="40"
+        [value]="searchText()"
+        (input)="onSearchInput($event)"
+      />
+    </div>
+    <div class="field">
+      <label for="g-status">Status</label>
+      <select id="g-status" (change)="setStatus($event)">
+        <option value="" [selected]="grid().statuses.length === 0">All statuses</option>
+        @for (s of statusOptions; track s.value) {
+          <option [value]="s.value" [selected]="grid().statuses[0] === s.value">{{ s.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="field mobile-sort">
+      <label for="g-sort">Sort by</label>
+      <select id="g-sort" (change)="setSortFromSelect($event)">
+        @for (c of columns; track c.field) {
+          <option [value]="c.field + ':asc'" [selected]="sort().field === c.field && sort().dir === 'asc'">{{ c.label }} ↑</option>
+          <option [value]="c.field + ':desc'" [selected]="sort().field === c.field && sort().dir === 'desc'">{{ c.label }} ↓</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <section class="card grid-card" aria-labelledby="grid-title" [attr.aria-busy]="orders.isLoading()">
+    <h2 id="grid-title" class="visually-hidden">Order lines</h2>
+    <p class="summary" aria-live="polite">{{ rangeText() }}</p>
+    @if (orders.isLoading() && shown()) {
+      <div class="progress" aria-hidden="true"></div>
+    }
+
+    @if (orders.error(); as error) {
+      <div class="state error" role="alert">
+        <p>Orders could not be loaded. {{ message(error) }}</p>
+        <button type="button" class="btn" (click)="orders.reload()">Retry</button>
+      </div>
+    } @else if (firstLoad()) {
+      <div class="skeleton-rows" aria-hidden="true">
+        @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+          <div class="skeleton row-skeleton"></div>
+        }
+      </div>
+      <span class="visually-hidden" role="status">Loading orders…</span>
+    } @else if (shown(); as page) {
+      @if (page.totalCount === 0) {
+        <div class="state">
+          <p>No orders match these filters.</p>
+          <button type="button" class="btn" (click)="clearAll()">Clear search and filters</button>
+        </div>
+      } @else {
+        <div class="table-wrap" [class.stale]="orders.isLoading()" tabindex="0" role="region" aria-labelledby="grid-title">
+          <table class="orders">
+            <caption class="visually-hidden">{{ caption() }}</caption>
+            <thead>
+              <tr>
+                @for (c of columns; track c.field) {
+                  <th scope="col" [attr.aria-sort]="ariaSort(c.field)" [class.num]="c.numeric">
+                    <button type="button" class="sort" (click)="sortBy(c.field)">
+                      {{ c.label }}
+                      <span class="arrow" aria-hidden="true">{{ ariaSort(c.field) === 'ascending' ? '▲' : ariaSort(c.field) === 'descending' ? '▼' : '↕' }}</span>
+                    </button>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of page.items; track row.id) {
+                <tr>
+                  @for (c of columns; track c.field) {
+                    <td [attr.data-label]="c.label" [class.num]="c.numeric">
+                      @if (c.field === 'status') {
+                        <span class="badge {{ row.status }}">{{ row.status }}</span>
+                      } @else {
+                        {{ cell(row, c.field) }}
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <nav class="pager" aria-label="Pagination">
+          <div class="field size">
+            <label for="g-size">Rows per page</label>
+            <select id="g-size" (change)="setPageSize($event)">
+              @for (size of pageSizes; track size) {
+                <option [value]="size" [selected]="size === grid().pageSize">{{ size }}</option>
+              }
+            </select>
+          </div>
+          <span class="page-info">Page {{ count(grid().page) }} of {{ count(page.totalPages) }}</span>
+          <div class="buttons">
+            <button type="button" class="btn" (click)="goTo(1)" [disabled]="grid().page <= 1" aria-label="First page">«</button>
+            <button type="button" class="btn" (click)="goTo(grid().page - 1)" [disabled]="grid().page <= 1">Previous</button>
+            <button type="button" class="btn" (click)="goTo(grid().page + 1)" [disabled]="grid().page >= page.totalPages">Next</button>
+            <button type="button" class="btn" (click)="goTo(page.totalPages)" [disabled]="grid().page >= page.totalPages" aria-label="Last page">»</button>
+          </div>
+        </nav>
+      }
+    }
+  </section>
+</div>

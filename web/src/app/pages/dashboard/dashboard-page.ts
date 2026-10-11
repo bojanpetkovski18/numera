@@ -1,10 +1,7 @@
-import { Component, effect, inject, untracked } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
-import { fromQueryParams, toQueryParams } from '../../core/filters/filter-state';
-import { FilterStore } from '../../core/filters/filter.store';
+import { Component } from '@angular/core';
+import { syncFiltersWithUrl } from '../../core/filters/sync-filters-with-url';
+import { FilterBar } from '../../shared/filters/filter-bar';
 import { BreakdownChart } from './breakdown-chart';
-import { FilterBar } from './filter-bar';
 import { KpiCards } from './kpi-cards';
 import { RevenueChart } from './revenue-chart';
 
@@ -56,22 +53,7 @@ import { RevenueChart } from './revenue-chart';
   `,
 })
 export class DashboardPage {
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly filters = inject(FilterStore);
-
   constructor() {
-    // URL -> store: on load, refresh, back/forward and shared links.
-    this.route.queryParamMap
-      .pipe(takeUntilDestroyed())
-      .subscribe((params) => this.filters.replace(fromQueryParams(params)));
-
-    // Store -> URL: replaceUrl so filter tweaks do not flood the browser history.
-    effect(() => {
-      const queryParams = toQueryParams(this.filters.filter());
-      untracked(() => {
-        void this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'merge', replaceUrl: true });
-      });
-    });
+    syncFiltersWithUrl(true);
   }
 }

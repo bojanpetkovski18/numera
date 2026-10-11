@@ -10,6 +10,8 @@ export const FilterStore = signalStore(
   { providedIn: 'root' },
   withState<FilterState>(DEFAULT_FILTER),
   withComputed((store, today = inject(TODAY)) => {
+    // Value equality: an update that leaves the filter unchanged must not look like a change to the widgets
+    // (each new object would otherwise trigger another request).
     const filter = computed<FilterState>(() => ({
       preset: store.preset(),
       from: store.from(),
@@ -18,11 +20,11 @@ export const FilterStore = signalStore(
       channels: store.channels(),
       categories: store.categories(),
       granularity: store.granularity(),
-    }));
+    }), { equal: sameFilter });
     return {
       filter,
       range: computed(() => resolveRange(filter(), today())),
-      apiParams: computed(() => toApiParams(filter(), today())),
+      apiParams: computed(() => toApiParams(filter(), today()), { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) }),
       isDefault: computed(() => sameFilter({ ...filter(), granularity: 'month' }, DEFAULT_FILTER)),
     };
   }),

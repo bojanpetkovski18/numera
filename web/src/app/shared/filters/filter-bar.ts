@@ -3,7 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { DATE_PRESETS, DatePreset } from '../../core/filters/filter-state';
 import { FilterStore } from '../../core/filters/filter.store';
 import { formatDate } from '../../core/format/format';
-import { FilterOptions } from './metrics.models';
+import { FilterOptions } from '../../core/filters/filter-options';
 
 type ListField = 'regions' | 'channels' | 'categories';
 
