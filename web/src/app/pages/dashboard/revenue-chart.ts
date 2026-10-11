@@ -1,6 +1,8 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
-import { FilterStore } from '../../core/filters/filter.store';
+import { Router, RouterLink } from '@angular/router';
+import { drillQueryParams, drillToPeriod } from '../../core/filters/drill-down';
+import { FilterStore, TODAY } from '../../core/filters/filter.store';
 import { Granularity, formatCurrency, formatInteger, formatPeriod } from '../../core/format/format';
 import { problemMessage } from '../../core/http/problem';
 import { ChartCanvas } from '../../shared/chart/chart-canvas';
@@ -9,7 +11,7 @@ import { RevenueTimeseries } from './metrics.models';
 
 @Component({
   selector: 'app-revenue-chart',
-  imports: [ChartCanvas],
+  imports: [ChartCanvas, RouterLink],
   template: `
     <section class="card" aria-labelledby="revenue-title">
       <header class="head">
@@ -45,7 +47,14 @@ import { RevenueTimeseries } from './metrics.models';
       } @else if (empty()) {
         <div class="state">No data for these filters.</div>
       } @else if (series.hasValue()) {
-        <app-chart-canvas [config]="config()" [label]="description()" />
+        <app-chart-canvas
+          [config]="config()"
+          [label]="description()"
+          [items]="items()"
+          [hint]="'Use the arrow keys to choose a ' + series.value().granularity + ', then press Enter to see its orders.'"
+          (selectItem)="open($event)"
+        />
+        <p class="chart-hint">Select a {{ series.value().granularity }} to see its completed order lines.</p>
         <details class="table-toggle">
           <summary>Show data table</summary>
           <div class="table-scroll">
@@ -57,7 +66,7 @@ import { RevenueTimeseries } from './metrics.models';
               <tbody>
                 @for (p of series.value().points; track p.periodStart) {
                   <tr>
-                    <th scope="row">{{ period(p.periodStart) }}</th>
+                    <th scope="row"><a routerLink="/orders" [queryParams]="drills()[$index]">{{ period(p.periodStart) }}</a></th>
                     <td>{{ money(p.revenue) }}</td>
                     <td>{{ count(p.orders) }}</td>
                   </tr>
@@ -105,6 +114,8 @@ import { RevenueTimeseries } from './metrics.models';
 })
 export class RevenueChart {
   protected readonly filters = inject(FilterStore);
+  private readonly today = inject(TODAY);
+  private readonly router = inject(Router);
   private readonly colors = readChartColors();
 
   protected readonly granularities: readonly { value: Granularity; label: string }[] = [
@@ -142,6 +153,38 @@ export class RevenueChart {
     const peak = points.reduce((best, p) => (p.revenue > best.revenue ? p : best), points[0]);
     return `${formatInteger(points.length)} ${granularity}s · highest ${formatPeriod(peak.periodStart, granularity)}, ${formatCurrency(peak.revenue)}`;
   });
+
+  /** Keyboard announcement for each point. */
+  protected readonly items = computed(() => {
+    const series = this.series.hasValue() ? this.series.value() : undefined;
+    if (!series) {
+      return [];
+    }
+    return series.points.map(
+      (p) => `${formatPeriod(p.periodStart, series.granularity)}: ${formatCurrency(p.revenue)}, ${formatInteger(p.orders)} orders`,
+    );
+  });
+
+  /**
+   * Orders-grid query params for each point: the current filter narrowed to that period. Uses the granularity the
+   * points were loaded with, not the toggle, which may already have moved on while the new series loads.
+   */
+  protected readonly drills = computed(() => {
+    const series = this.series.hasValue() ? this.series.value() : undefined;
+    if (!series) {
+      return [];
+    }
+    const filter = this.filters.filter();
+    const today = this.today();
+    return series.points.map((p) => drillQueryParams(drillToPeriod(filter, today, p.periodStart, series.granularity)));
+  });
+
+  protected open(index: number): void {
+    const queryParams = this.drills()[index];
+    if (queryParams) {
+      void this.router.navigate(['/orders'], { queryParams });
+    }
+  }
 
   protected period(value: string): string {
     return formatPeriod(value, this.series.value()?.granularity ?? 'month');

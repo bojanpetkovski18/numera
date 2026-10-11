@@ -102,6 +102,8 @@ export function breakdownChartConfig(groups: readonly BreakdownGroup[], colors: 
       responsive: true,
       maintainAspectRatio: false,
       animation: reducedMotion() ? false : { duration: 300 },
+      // The whole row of a bar is its target, so short bars are as easy to hover and click as long ones.
+      interaction: { mode: 'index', axis: 'y', intersect: false },
       plugins: {
         legend: { display: false },
         tooltip: {

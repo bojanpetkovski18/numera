@@ -18,6 +18,8 @@ Chart.register(BarController, BarElement, CategoryScale, Filler, LineController,
 
 export interface ChartHandle {
   update(config: ChartConfiguration): void;
+  /** Shows the hover state and tooltip for one item (keyboard navigation); null clears it. */
+  highlight(index: number | null): void;
   destroy(): void;
 }
 
@@ -32,6 +34,12 @@ export const CHART_FACTORY = new InjectionToken<ChartFactory>('CHART_FACTORY', {
       update(next) {
         chart.data = next.data;
         chart.options = next.options ?? {};
+        chart.update();
+      },
+      highlight(index) {
+        const active = index === null ? [] : chart.data.datasets.map((_, datasetIndex) => ({ datasetIndex, index }));
+        chart.setActiveElements(active);
+        chart.tooltip?.setActiveElements(active, { x: 0, y: 0 });
         chart.update();
       },
       destroy() {
