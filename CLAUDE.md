@@ -39,17 +39,17 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 
 - Build API: `dotnet build` (repo root)
 - Test API: `dotnet test` (repo root)
-- Run API: `dotnet run --project src/Numera.Api --urls http://localhost:5080`
+- Run API: `dotnet run --project src/Numera.Api` (launch profile serves http://localhost:5080)
 - Build web: `npm run build` (in `web/`)
 - Test web: `npm test -- --watch=false` (in `web/`)
-- Run web: `npm start` (in `web/`, serves on http://localhost:4200 and proxies `/api` to the API on port 5080; set `NG_CLI_ANALYTICS=false` in non-interactive shells)
+- Run web: `npm start` (in `web/`, serves on http://localhost:4200 and proxies `/api` and `/health` to the API on port 5080)
 - Migrate DB: `dotnet run --project src/Numera.Api -- migrate` (needs `ConnectionStrings__Numera`, for example `Host=localhost;Port=5432;Database=numera;Username=numera;Password=<value from .env>`)
 - API settings come from environment variables: `Jwt__SigningKey` (at least 32 characters, generate your own; see `.env.example`) and `ConnectionStrings__Numera`. The API refuses to start without a valid signing key.
 - Import a CSV (needs a token from `POST /api/auth/login`): `curl -H "Authorization: Bearer <token>" -F "file=@orders.csv;type=text/csv" http://localhost:5080/api/imports`; limits are 10 MB and 100,000 rows; dates must be `yyyy-MM-dd`
 - Import history and error report: `GET /api/imports` (recent jobs) and `GET /api/imports/{id}/errors.csv`; a sample CSV is served from the web app at `/sample-orders.csv`
 - Demo login: `demo@numera.example` / `Demo-Pass-2026!` (documented demo values; created by `migrate` and `seed`)
 - Seed DB (reset, then ~200,000 rows): `dotnet run --project src/Numera.Api -- seed`
-- Add a migration: `dotnet ef migrations add <Name> -p src/Numera.Infrastructure -s src/Numera.Api -o Persistence/Migrations`
+- Add a migration: `dotnet tool restore` once, then `dotnet ef migrations add <Name> -p src/Numera.Infrastructure -s src/Numera.Api -o Persistence/Migrations` (dotnet-ef is pinned in `dotnet-tools.json`)
 - Start PostgreSQL: `docker compose up -d` (copy `.env.example` to `.env` first; verified: container reports healthy)
 - Run everything: start PostgreSQL, then run the API and the web app in two terminals
 
