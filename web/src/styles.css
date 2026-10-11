@@ -1,0 +1,70 @@
+﻿/* Numera design tokens. Direction: warm paper background, espresso sidebar, pine primary, amber accent. */
+:root {
+  --color-bg: #f6f2ec;
+  --color-surface: #ffffff;
+  --color-ink: #231d19;
+  --color-muted: #6b6159;
+  --color-border: #e2dad0;
+  --color-sidebar: #231d19;
+  --color-sidebar-ink: #f1e9df;
+  --color-sidebar-muted: #a89c90;
+  --color-primary: #2f5d50;
+  --color-primary-ink: #ffffff;
+  --color-accent: #c8843a;
+  --color-focus: #1d6fd1;
+  --color-danger: #b3372c;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  --font-sans: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.75rem;
+  --font-weight-medium: 500;
+  --font-weight-bold: 650;
+
+  --sidebar-width: 15rem;
+  --topbar-height: 3.5rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
