@@ -1,4 +1,4 @@
-# Numera Decisions Log
+﻿# Numera Decisions Log
 
 One entry per meaningful decision. Format: context, decision, alternatives, trade-offs. The agent adds entries as it works; review them yourself, because you should be able to explain every one in an interview.
 
@@ -51,4 +51,38 @@ One entry per meaningful decision. Format: context, decision, alternatives, trad
 - **Context:** M01 requires structured logging; no logging package is needed yet.
 - **Decision:** `builder.Logging.AddJsonConsole()` with message templates. Revisit (for example Serilog) only if a later milestone needs sinks or enrichment.
 
-_Add new decisions below as D009, D010, ..._
+## D009: Schema conventions, entity placement and index rationale
+
+- **Context:** M02 defines the schema for `orders`, `import_jobs`, `import_errors`, `users`.
+- **Decision:**
+  - Entities are plain classes in `Numera.Application/Entities`; the DbContext, configurations and migrations live in `Numera.Infrastructure`. Column names are snake_case via a loop in `OnModelCreating` (no naming-convention package).
+  - `orders.id` is a `bigint` identity; `import_jobs.id` and `users.id` are `uuid`. `orders.status` is stored as lowercase text (`completed`, `refunded`, `cancelled`) with a check constraint, matching the CSV vocabulary. `order_date` is a `date`.
+  - `import_jobs.status` values (`Pending`, `Processing`, `Completed`, `Failed`) are an assumption; M04 may refine them. `import_errors.field` is nullable for row-level errors.
+  - Deleting an import job sets `orders.import_job_id` to null and cascades to its errors.
+- **Index rationale:**
+  - `ux_orders_order_id_product_sku` (unique): enforces the duplicate rule; its leading column also serves order_id search.
+  - `ix_orders_order_date`: date-range filter and time series, the most selective filter.
+  - `ix_orders_region`, `ix_orders_channel`, `ix_orders_product_category`, `ix_orders_status`: grid filters and breakdown group-bys. These are low cardinality, so on their own they help little for broad filters; they are required by the spec and will be re-evaluated against measured query plans in M06/M08.
+  - `ix_orders_import_job_id` and `ix_import_errors_import_job_id`: foreign-key lookups (error report download, job cleanup).
+- **Trade-offs:** More indexes slow bulk inserts and use space; accepted for a read-heavy reporting app.
+
+## D010: Deterministic seed generator and binary COPY seeding
+
+- **Context:** The demo needs about 200,000 realistic rows, reproducible across machines and resets.
+- **Decision:** `DemoDataGenerator` is pure: a seeded `System.Random` and a fixed `EndDate` (2026-09-30, not the clock) so output never changes and is never in the future. `DemoSeeder` truncates `import_errors`, `import_jobs`, `orders` (keeps `users`) and bulk-loads with Npgsql binary `COPY` in one transaction.
+- **Alternatives:** EF `AddRange` + `SaveChanges` (much slower), `EFCore.BulkExtensions` (extra dependency).
+- **Trade-offs:** The window is fixed, so the demo data ages as time passes; the end date can be moved deliberately via `SeedOptions`.
+
+## D011: Maintenance commands as positional API arguments
+
+- **Context:** M02 asks for a small CLI/startup option to migrate and seed.
+- **Decision:** `dotnet run --project src/Numera.Api -- migrate` and `-- seed` (migrate, then reset and seed) run against `ConnectionStrings__Numera` and exit. Positional words are used because `--flag` style arguments are consumed by the .NET configuration provider.
+- **Trade-offs:** Reuses the API's DI container instead of a separate console project.
+
+## D012: Pin EF Core to one version
+
+- **Context:** `Npgsql.EntityFrameworkCore.PostgreSQL` 10.0.3 pulled EF Core 10.0.4 while `Microsoft.EntityFrameworkCore.Design` was 10.0.12, producing assembly-conflict warnings (errors under warnings-as-errors).
+- **Decision:** Reference `Microsoft.EntityFrameworkCore` and `.Relational` 10.0.12 explicitly in Infrastructure.
+- **Trade-offs:** Package versions are bumped manually together.
+
+_Add new decisions below as D013, D014, ..._

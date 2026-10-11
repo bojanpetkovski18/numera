@@ -7,7 +7,7 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 | # | Milestone | Est. sessions | Status | Verified on | Notes |
 |---|---|---|---|---|---|
 | M01 | Repo, tooling, API skeleton, CI, Angular shell | 2 | complete locally | 2026-10-11 | API/web build and tests and `docker compose up -d` (PostgreSQL healthy) verified. CI run not yet verified: no git remote configured. |
-| M02 | Database schema and seed generator | 2 | not started | | |
+| M02 | Database schema and seed generator | 2 | complete locally | 2026-10-11 | Migration, 200,000-row seed, unit and Testcontainers tests verified locally. CI run pending. |
 | M03 | Authentication (JWT, demo user) | 1 | not started | | |
 | M04 | CSV import: upload and validation | 3 | not started | | |
 | M05 | CSV import: error report and import UI | 2 | not started | | |
@@ -23,9 +23,10 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Measured results (fill in only when measured)
 
-- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed (unit and integration projects) on 2026-10-11
+- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (10 unit tests, 11 integration tests against PostgreSQL 17 via Testcontainers)
 - Web build / test status: `npm run build` succeeded; `npm test -- --watch=false` passed on 2026-10-11
 - Query time for dashboard on seeded data: _not measured_
+- Seed time, 200,000 rows (local Docker PostgreSQL 17, dev machine, single runs on 2026-10-11): generation 522 ms, binary COPY insert 3,274 ms in the service; about 5.6 s wall-clock for `dotnet run -- seed` including process start and migrate check
 - Import time for a 100,000-row file: _not measured_
 
 ## Known issues
@@ -37,4 +38,4 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Next step
 
-Add a GitHub remote and push `dev` to confirm CI is green, then start M02 (database schema and seed generator) on a new `#0001-` branch.
+Confirm CI is green on `#0001-database-and-seed`, merge to `dev`, then start M03 (authentication) on a new `#0002-` branch.
