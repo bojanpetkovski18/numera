@@ -126,4 +126,50 @@ One entry per meaningful decision. Format: context, decision, alternatives, trad
 - **Context:** Windows PowerShell 5.1 `Set-Content -Encoding utf8` writes a BOM, which crept into many files in M01 to M03 (including JSON).
 - **Decision:** BOMs were removed in one commit. Files are written without a BOM (`.editorconfig` already says `charset = utf-8`).
 
-_Add new decisions below as D019, D020, ..._
+## D019: Imports are processed synchronously
+
+- **Context:** M04 asks to choose synchronous or background processing.
+- **Decision:** `POST /api/imports` does the whole import inside the request and returns the final job summary (201). `GET /api/imports/{id}` returns the same summary later. The `pending` status is reserved; a job is `processing` while the request runs.
+- **Why:** The limits (10 MB, 100,000 rows) bound the work. A measured 100,000-row import takes a few seconds (see `PROGRESS.md`), which fits a request, and there is no queue, worker or polling to build and test.
+- **Trade-offs:** A client that disconnects mid-import cancels it (the transaction rolls back). A reverse proxy needs a request timeout comfortably above the import time. If the limits grow, move to a background worker (Channel + hosted service) and keep the same `GET` endpoint for progress.
+
+## D020: One transaction per import, staging table, `ON CONFLICT DO NOTHING`
+
+- **Context:** "A row error never aborts the import" but an infrastructure failure must not leave half a file.
+- **Decision:**
+  - The job row is created and committed first (so a failure is always recorded).
+  - The file is scanned once for header and row-count problems without touching the data tables.
+  - Valid rows, error rows and the job's final counts are then written in a single transaction: all-or-nothing for the data, while bad rows are recorded, never fatal.
+  - Valid rows are streamed in batches of 5,000 through a temporary staging table (binary `COPY`) and moved into `orders` with `INSERT ... ON CONFLICT (order_id, product_sku) DO NOTHING RETURNING`. Rows that did not come back already existed.
+- **Alternatives:** Per-batch transactions (partial imports on failure), pre-checking existing keys with a `SELECT` (race-prone), EF `AddRange` (slow).
+- **Trade-offs:** One long transaction for up to 100,000 rows (a few seconds). The conflict detection is race-proof because the unique index decides.
+
+## D021: Rows that already exist are rejected, not updated
+
+- **Decision:** A row whose `(order_id, product_sku)` already exists in `orders` is rejected with "already exist" and recorded in `import_errors`; the existing row is kept. Within one file, the first valid occurrence wins and later ones are rejected with "first seen on row N".
+- **Why:** The import is an append operation; silently overwriting history would make dashboards change without notice. Re-uploading the same file is therefore safe (every row is rejected, nothing is duplicated).
+- **Trade-offs:** Correcting an existing order requires a future "update" feature (not in the MVP).
+
+## D022: Validation details beyond the spec text
+
+- Dates must be `yyyy-MM-dd`; other formats are rejected because `03/04/2025` is ambiguous. "Not in the future" is compared with today's UTC date.
+- `status` is matched case-insensitively and stored lowercase.
+- `unit_price` allows at most 2 decimals and `discount` at most 3, matching `numeric(12,2)` and `numeric(4,3)`; values are never silently rounded. Quantity must be a whole number (`2.0` is rejected).
+- Text fields are trimmed, required, and limited to their column lengths.
+- Every failing field of a row gets its own `import_errors` row, so `import_errors` can have more rows than there are rejected rows; `rejected_rows` counts rows, and the number of distinct `row_number` values equals it.
+- `row_number` is the 1-based record number with the header as row 1 (the number you see in a spreadsheet). A wrong column count or malformed quoting rejects that row only.
+- Raw rows are stored truncated to 2,000 characters.
+
+## D023: File-level rejection and extra `import_jobs` columns
+
+- **Decision:** A file that cannot be processed at all (empty, header only, missing or repeated required columns, more than 100,000 rows) produces a `failed` job with a `failure_reason` and an HTTP problem response: 422 for content problems, 413 for too many rows or more than 10 MB, 415 for wrong file type or binary content, 400 for no file. The 413/415/400 cases for size and type are detected before a job is created.
+- Unknown columns are not an error: they are ignored and listed in `import_jobs.warnings`.
+- **Schema:** migration `AddImportJobDetails` adds `warnings text[]` and `failure_reason varchar(500)` to `import_jobs` (an addition to the original schema, so the reason is queryable later, for example by the M05 UI). `import_jobs.status` is stored lowercase.
+- **Security:** Antiforgery is disabled on the upload endpoint because the API uses bearer tokens, not cookies. Uploads are streamed to a temporary file by the framework above 64 KB, the type is checked by extension, content type and a NUL-byte sniff, and CSV content is only ever passed to parameterised/binary COPY, never interpolated into SQL.
+
+## D024: CsvHelper's low-level parser and handler placement
+
+- **Decision:** `CsvHelper` is used through `CsvParser` (not the object mapper), with a header index built by `HeaderEvaluation`, so the pure rules in `Numera.Application` are unit-testable without a file or database. The streaming reader, scanner and import handler live in `Numera.Infrastructure` because they depend on CsvHelper and PostgreSQL `COPY`; this is an exception to D003/D014 for I/O-bound handlers.
+- **Trade-offs:** The file is read twice (scan, then load). Parsing 100,000 rows is cheap compared with rolling back a database transaction for a file that was over the limit anyway.
+
+_Add new decisions below as D025, D026, ..._

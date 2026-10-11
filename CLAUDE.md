@@ -45,6 +45,7 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 - Run web: `npm start` (in `web/`, serves on http://localhost:4200 and proxies `/api` to the API on port 5080; set `NG_CLI_ANALYTICS=false` in non-interactive shells)
 - Migrate DB: `dotnet run --project src/Numera.Api -- migrate` (needs `ConnectionStrings__Numera`, for example `Host=localhost;Port=5432;Database=numera;Username=numera;Password=<value from .env>`)
 - API settings come from environment variables: `Jwt__SigningKey` (at least 32 characters, generate your own; see `.env.example`) and `ConnectionStrings__Numera`. The API refuses to start without a valid signing key.
+- Import a CSV (needs a token from `POST /api/auth/login`): `curl -H "Authorization: Bearer <token>" -F "file=@orders.csv;type=text/csv" http://localhost:5080/api/imports`; limits are 10 MB and 100,000 rows; dates must be `yyyy-MM-dd`
 - Demo login: `demo@numera.example` / `Demo-Pass-2026!` (documented demo values; created by `migrate` and `seed`)
 - Seed DB (reset, then ~200,000 rows): `dotnet run --project src/Numera.Api -- seed`
 - Add a migration: `dotnet ef migrations add <Name> -p src/Numera.Infrastructure -s src/Numera.Api -o Persistence/Migrations`
