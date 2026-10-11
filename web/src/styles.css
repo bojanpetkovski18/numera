@@ -68,3 +68,121 @@ h3 {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
+
+/* --- Shared widget surfaces and states (dashboard, later the grid) --- */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+}
+
+.widget-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.widget-subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+.state {
+  display: grid;
+  place-items: center;
+  gap: var(--space-2);
+  min-height: 8rem;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.state.error {
+  color: var(--color-danger);
+}
+
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--color-border) 0%, var(--color-bg) 50%, var(--color-border) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--color-muted);
+}
+
+.data-table {
+  width: 100%;
+  margin-top: var(--space-3);
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: right;
+}
+
+.data-table th:first-child,
+.data-table td:first-child {
+  text-align: left;
+}
+
+.table-toggle {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.table-toggle summary {
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.table-scroll {
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
