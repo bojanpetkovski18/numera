@@ -65,7 +65,11 @@ public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) 
         b.ToTable("import_jobs");
         b.HasKey(j => j.Id);
         b.Property(j => j.FileName).HasMaxLength(260);
-        b.Property(j => j.Status).HasConversion<string>().HasMaxLength(20);
+        b.Property(j => j.Status)
+            .HasMaxLength(20)
+            .HasConversion(s => s.ToString().ToLowerInvariant(), v => Enum.Parse<ImportJobStatus>(v, true));
+        b.Property(j => j.Warnings).HasColumnType("text[]");
+        b.Property(j => j.FailureReason).HasMaxLength(500);
     }
 
     private static void ConfigureImportError(EntityTypeBuilder<ImportError> b)

@@ -6,8 +6,11 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Http.Features;
 using Numera.Api.Auth;
+using Numera.Api.Imports;
 using Numera.Application;
+using Numera.Application.Imports;
 using Numera.Infrastructure;
 using Numera.Infrastructure.Auth;
 using Numera.Infrastructure.Persistence;
@@ -18,6 +21,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddJsonConsole();
 
 builder.Services.AddProblemDetails();
+
+// Upload limits (spec: 10 MB). Each multipart part is capped at the file limit; the request body gets a little
+// headroom for the multipart envelope.
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = ImportLimits.MaxFileBytes);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = ImportLimits.MaxFileBytes + 1024 * 1024);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -114,6 +122,7 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
     .AllowAnonymous();
 app.MapAuthEndpoints();
+app.MapImportEndpoints();
 
 app.Run();
 

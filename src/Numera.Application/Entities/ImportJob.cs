@@ -18,4 +18,10 @@ public class ImportJob
     public int RejectedRows { get; set; }
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>Non-fatal notes, for example unknown columns that were ignored.</summary>
+    public string[] Warnings { get; set; } = [];
+
+    /// <summary>Why the whole file was rejected, when <see cref="Status"/> is Failed.</summary>
+    public string? FailureReason { get; set; }
 }
