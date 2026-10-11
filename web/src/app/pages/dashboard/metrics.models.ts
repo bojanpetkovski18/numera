@@ -30,11 +30,3 @@ export interface RevenueBreakdown {
   readonly by: 'category' | 'region' | 'channel';
   readonly groups: readonly BreakdownGroup[];
 }
-
-export interface FilterOptions {
-  readonly regions: readonly string[];
-  readonly channels: readonly string[];
-  readonly categories: readonly string[];
-  readonly firstOrderDate: string | null;
-  readonly lastOrderDate: string | null;
-}

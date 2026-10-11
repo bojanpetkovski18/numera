@@ -19,9 +19,8 @@ export const routes: Routes = [
       },
       {
         path: 'orders',
-        component: PlaceholderPage,
+        loadComponent: () => import('./pages/orders/orders-page').then((m) => m.OrdersPage),
         title: 'Orders · Numera',
-        data: { heading: 'Orders', description: 'The filterable orders grid arrives in milestone M08.' },
       },
       {
         path: 'import',
