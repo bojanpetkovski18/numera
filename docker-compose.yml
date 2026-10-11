@@ -1,0 +1,19 @@
+﻿services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-numera}
+      POSTGRES_USER: ${POSTGRES_USER:-numera}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - numera-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-numera} -d ${POSTGRES_DB:-numera}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  numera-pgdata:
