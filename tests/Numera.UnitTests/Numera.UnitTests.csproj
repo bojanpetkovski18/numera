@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Numera.Application\Numera.Application.csproj" />
+    <ProjectReference Include="..\..\src\Numera.Infrastructure\Numera.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
