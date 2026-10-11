@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Numera.Api/Numera.Api.csproj" />
+    <Project Path="src/Numera.Application/Numera.Application.csproj" />
+    <Project Path="src/Numera.Infrastructure/Numera.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Numera.IntegrationTests/Numera.IntegrationTests.csproj" />
+    <Project Path="tests/Numera.UnitTests/Numera.UnitTests.csproj" />
+  </Folder>
+</Solution>
