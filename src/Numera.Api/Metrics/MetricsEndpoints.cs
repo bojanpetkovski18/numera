@@ -24,6 +24,10 @@ public static class MetricsEndpoints
         group.MapGet("/summary", SummaryAsync);
         group.MapGet("/timeseries", TimeseriesAsync);
         group.MapGet("/breakdown", BreakdownAsync);
+
+        // Shared by the dashboard filter bar and (M08) the orders grid.
+        app.MapGet("/api/filter-options", async (GetFilterOptionsHandler handler, CancellationToken ct) =>
+            Results.Ok(await handler.HandleAsync(ct)));
         return app;
     }
 

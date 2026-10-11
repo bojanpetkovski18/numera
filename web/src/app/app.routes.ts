@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
-import { ImportPage } from './pages/import/import-page';
 import { LoginPage } from './pages/login/login-page';
 import { PlaceholderPage } from './pages/placeholder-page';
 import { Shell } from './shell/shell';
@@ -15,9 +14,8 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',
-        component: PlaceholderPage,
+        loadComponent: () => import('./pages/dashboard/dashboard-page').then((m) => m.DashboardPage),
         title: 'Dashboard · Numera',
-        data: { heading: 'Dashboard', description: 'KPIs, charts and the date filter arrive in milestone M07.' },
       },
       {
         path: 'orders',
@@ -25,7 +23,11 @@ export const routes: Routes = [
         title: 'Orders · Numera',
         data: { heading: 'Orders', description: 'The filterable orders grid arrives in milestone M08.' },
       },
-      { path: 'import', component: ImportPage, title: 'Import · Numera' },
+      {
+        path: 'import',
+        loadComponent: () => import('./pages/import/import-page').then((m) => m.ImportPage),
+        title: 'Import · Numera',
+      },
       {
         path: 'settings',
         component: PlaceholderPage,

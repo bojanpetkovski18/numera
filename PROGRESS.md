@@ -13,7 +13,7 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 | M05 | CSV import: error report and import UI | 2 | complete locally | 2026-10-11 | Error report, history endpoint, Import screen, unit/integration/component tests and a headless-Edge run verified. CI run pending. |
 | P01 | Polish pass after M05: known issues, bugs, import performance | - | complete locally | 2026-10-11 | Not a spec milestone (requested by the project owner). Unit, integration and web tests, real-Kestrel limit checks, headless-Edge checks and a before/after import benchmark verified. CI run pending. |
 | M06 | Metrics endpoints (summary, timeseries, breakdown) | 2 | complete locally | 2026-10-11 | Definitions documented, endpoints, unit and Testcontainers tests against hand-computed data, EXPLAIN findings and HTTP timings on the seed. CI run pending. |
-| M07 | Dashboard UI (KPIs, charts, date filter) | 3 | not started | | |
+| M07 | Dashboard UI (KPIs, charts, date filter) | 3 | complete locally | 2026-10-11 | Dashboard, filter bar with URL sync, component and unit tests, and a headless-Edge run at 1280, 768 and 375 px with no console errors. CI run pending. |
 | M08 | Orders grid (API and UI) | 3 | not started | | |
 | M09 | Drill-down from charts to grid | 1 | not started | | |
 | M10 | CSV export of filtered view | 1 | not started | | |
@@ -24,8 +24,8 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Measured results (fill in only when measured)
 
-- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (160 unit tests, 87 integration tests against PostgreSQL 17 via Testcontainers)
-- Web build / test status: `npm run build` succeeded; `npm test -- --watch=false` passed on 2026-10-11 (34 tests in 7 files)
+- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (160 unit tests, 90 integration tests against PostgreSQL 17 via Testcontainers)
+- Web build / test status: `npm run build` succeeded (initial bundle 344.70 kB raw / 92.17 kB transferred; dashboard chunk 196 kB / 59 kB, lazy); `npm test -- --watch=false` passed on 2026-10-11 (71 tests in 13 files)
 - Metrics endpoint time on the 200,000-row seed (2026-10-11; Release build, API and Docker PostgreSQL 17 on the same Windows 11 dev machine; warm; 20 HTTP calls each with `curl.exe`, time to full response; median / p90):
   - summary, all data: 75.8 / 85.7 ms; one month: 10.0 / 11.4 ms; one region: 15.2 / 16.8 ms
   - timeseries, all data by month (24 points): 127.1 / 137.4 ms; by day (730 points): 126.3 / 132.4 ms; one year by week: 72.0 / 76.9 ms
@@ -45,4 +45,4 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Next step
 
-Confirm CI is green on `#0006-metrics-endpoints`, merge to `dev`, then start M07 (dashboard UI) on a new `#0007-` branch.
+Confirm CI is green on `#0007-dashboard-ui`, merge to `dev`, then start M08 (orders grid) on a new `#0008-` branch.

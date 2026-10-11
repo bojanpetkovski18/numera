@@ -253,4 +253,31 @@ Measured with `EXPLAIN (ANALYZE)` on the local Docker PostgreSQL 17 after `ANALY
 - `ix_orders_status` was not used by any metrics query; it stays for the grid (M08) and will be re-checked there.
 - No index changes in M06.
 
-_Add new decisions below as D034, D035, ..._
+## D034: Chart.js 4, used directly
+
+- **Context:** M07 needs a mature charting library with readable, accessible, responsive charts.
+- **Decision:** Chart.js 4.5 through a thin `ChartCanvas` component, registering only the controllers, elements and scales the dashboard uses.
+- **Why:** Mature and widely used; canvas rendering stays fast with 730 daily points; tree-shakable; responsive out of the box. Using it directly avoids an Angular wrapper library whose releases lag behind Angular majors (this project is on Angular 22).
+- **Accessibility:** Canvas charts are opaque to screen readers, so every chart has a `role="img"` text summary (range, totals, peak) and a "Show data table" disclosure with the exact values. Each chart has a single series, so nothing is encoded by color alone; colors come from the design tokens (primary on white passes contrast); animations are disabled under `prefers-reduced-motion`.
+- **Alternatives:** ECharts (more chart types, much larger bundle), ApexCharts (SVG, heavier with many points), ngx-charts (D3/SVG; ties to Angular versions).
+- **Trade-offs:** The library adds about 196 kB (59 kB transferred) to the lazy dashboard chunk. Feature pages are lazy-loaded so the initial bundle stays at about 345 kB, under the 500 kB budget (it was 555 kB before lazy loading).
+
+## D035: Filter state in a SignalStore, mirrored in the URL
+
+- **Decision:** `FilterStore` (`@ngrx/signals`) holds the date preset or custom range, region, channel, category and the chart granularity.
+  - Pure functions (`filter-state.ts`) map between the store, the URL query string and API parameters, and are unit-tested for round-trips.
+  - The dashboard page syncs both ways: URL to store on load, refresh and back/forward; store to URL with `replaceUrl`, so tweaking filters does not flood browser history.
+  - Defaults are omitted from the URL, so the plain dashboard URL stays clean.
+  - Malformed URL values fall back to defaults instead of erroring, because shared URLs get edited by hand.
+- **Presets** (last 30 days, last 90 days, year to date) are stored as presets, not dates, so a shared "last 30 days" link means the last 30 days whenever it is opened. They resolve against the browser's local date. "All time" sends no dates; a custom range is stored as explicit dates.
+- **Widgets** use Angular's `httpResource` (stable in Angular 22), which gives each widget loading, error and reload for free and refetches when the filter signal changes.
+- **Filter bar:** single-select dropdowns per dimension for now. The API and store already accept several values, for the grid in M08.
+
+## D036: Filter options endpoint, presentation choices
+
+- `GET /api/filter-options` is an addition to the API draft. It returns the distinct regions, channels and categories in the data plus the first and last order date, for the filter dropdowns and the "showing all data" range text. The grid in M08 will reuse it.
+- Amounts are shown in US dollars (the fictional company's currency is not specified). Revenue KPIs above $1,000 drop cents; tables and tooltips keep cents.
+- The revenue chart's subtitle shows the period count and the best period, not a total. Summing per-period values that were each rounded to the cent drifts from the Revenue KPI by a few cents (seen in the browser: $10,376,613.91 by week, $10,376,615.58 by day, versus $10,376,613.65), which reads as an error.
+- Dark mode was skipped: the tokens would allow it, but the charts would also need a second color set. It is optional in the spec.
+
+_Add new decisions below as D037, D038, ..._

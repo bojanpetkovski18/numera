@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<GetMetricsSummaryHandler>();
         services.AddScoped<GetRevenueTimeseriesHandler>();
         services.AddScoped<GetRevenueBreakdownHandler>();
+        services.AddScoped<GetFilterOptionsHandler>();
         return services;
     }
 }

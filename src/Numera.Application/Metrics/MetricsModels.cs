@@ -30,6 +30,14 @@ public sealed record BreakdownGroup(string Key, decimal Revenue, int Orders);
 
 public sealed record RevenueBreakdown(string By, IReadOnlyList<BreakdownGroup> Groups);
 
+/// <summary>Values the filter bar can offer, taken from the data, plus the data's date range.</summary>
+public sealed record FilterOptions(
+    IReadOnlyList<string> Regions,
+    IReadOnlyList<string> Channels,
+    IReadOnlyList<string> Categories,
+    DateOnly? FirstOrderDate,
+    DateOnly? LastOrderDate);
+
 /// <summary>Period arithmetic shared by validation and tests. Weeks start on Monday (ISO 8601).</summary>
 public static class Periods
 {
