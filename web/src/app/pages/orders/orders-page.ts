@@ -11,6 +11,7 @@ import { formatCurrency, formatDate, formatDiscount, formatInteger } from '../..
 import { problemMessage } from '../../core/http/problem';
 import { FilterBar } from '../../shared/filters/filter-bar';
 import { FilterChips } from '../../shared/filters/filter-chips';
+import { ExportButton } from './export-button';
 import {
   DEFAULT_GRID,
   GridState,
@@ -20,6 +21,7 @@ import {
   SortField,
   effectiveSort,
   gridApiParams,
+  gridExportParams,
   gridFromQueryParams,
   gridToQueryParams,
   nextSort,
@@ -44,7 +46,7 @@ export const SEARCH_DEBOUNCE_MS = 300;
 
 @Component({
   selector: 'app-orders-page',
-  imports: [FilterBar, FilterChips, RouterLink],
+  imports: [ExportButton, FilterBar, FilterChips, RouterLink],
   templateUrl: './orders-page.html',
   styleUrl: './orders-page.css',
 })
@@ -144,6 +146,9 @@ export class OrdersPage {
   protected readonly dashboardParams = computed(() => dashboardQueryParams(this.filters.filter()));
 
   protected readonly chipLabels = computed(() => this.chips().map((c) => c.label));
+
+  /** The export gets exactly what the grid requests, minus paging. */
+  protected readonly exportParams = computed(() => ({ ...this.filters.apiParams(), ...gridExportParams(this.grid()) }));
 
   protected readonly caption = computed(() => {
     const { field, dir } = this.sort();

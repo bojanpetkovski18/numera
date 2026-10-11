@@ -16,7 +16,7 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 | M07 | Dashboard UI (KPIs, charts, date filter) | 3 | complete locally | 2026-10-11 | Dashboard, filter bar with URL sync, component and unit tests, and a headless-Edge run at 1280, 768 and 375 px with no console errors. CI run pending. |
 | M08 | Orders grid (API and UI) | 3 | complete locally | 2026-10-11 | Orders API with paging, whitelisted sort, filters and trigram-indexed search; grid UI with URL state; unit, Testcontainers and component tests; query plans and HTTP timings on the seed; a headless-Edge run at 1280, 768 and 375 px with no console errors. CI run pending. |
 | M09 | Drill-down from charts to grid | 1 | complete locally | 2026-10-11 | Click, keyboard and data-table drill-downs from all three charts; filter chips and a back link on the grid; back/forward and scroll fixes; unit, component and Testcontainers consistency tests; a headless-Edge run of every drill path, numbers compared with the dashboard, at 1280 and 375 px with no console errors. CI run pending. |
-| M10 | CSV export of filtered view | 1 | not started | | |
+| M10 | CSV export of filtered view | 1 | complete locally | 2026-10-12 | Streamed export from one snapshot with a 100,000-row limit; Export CSV button with progress, result and error states; unit, Testcontainers (export = grid, cell by cell) and component tests; browser download compared with the grid; memory and time measured on the seed. CI run pending. |
 | M11 | Demo reset, states, responsive polish | 3 | not started | | |
 | M12 | E2E test, Docker, deploy, README, screenshots | 4 | not started | | |
 
@@ -24,8 +24,8 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Measured results (fill in only when measured)
 
-- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (160 unit tests, 161 integration tests against PostgreSQL 17 via Testcontainers)
-- Web build / test status: `npm run build` succeeded (initial bundle 355.94 kB raw / 94.99 kB transferred; dashboard chunk 191.32 kB / 57.86 kB and orders chunk 21.41 kB / 6.13 kB, both lazy); `npm test -- --watch=false` passed on 2026-10-11 (112 tests in 17 files)
+- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (172 unit tests, 176 integration tests against PostgreSQL 17 via Testcontainers)
+- Web build / test status: `npm run build` succeeded (initial bundle 356.27 kB raw / 95.11 kB transferred; dashboard chunk 191.40 kB / 57.88 kB and orders chunk 25.07 kB / 7.29 kB, both lazy); `npm test -- --watch=false` passed on 2026-10-12 (122 tests in 19 files)
 - Metrics endpoint time on the 200,000-row seed (2026-10-11; Release build, API and Docker PostgreSQL 17 on the same Windows 11 dev machine; warm; 20 HTTP calls each with `curl.exe`, time to full response; median / p90):
   - summary, all data: 75.8 / 85.7 ms; one month: 10.0 / 11.4 ms; one region: 15.2 / 16.8 ms
   - timeseries, all data by month (24 points): 127.1 / 137.4 ms; by day (730 points): 126.3 / 132.4 ms; one year by week: 72.0 / 76.9 ms
@@ -35,6 +35,10 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
   - sorted by line total: 58.5 / 62.7 ms; page 4,000: 57.9 / 63.1 ms; last page (8,000): 92.3 / 106.9 ms
   - order ID search "1195": 13.6 / 16.1 ms
 - Orders query plans (`EXPLAIN (ANALYZE)`, same setup, 2026-10-11): count all 12.9 ms, one region 3.8 ms, one month 0.9 ms; page 1 by date 0.4 ms, page 4,000 42.4 ms, last page 92.6 ms; ID contains-search 20–24 ms without an index, 0.3–0.5 ms with the trigram index for terms of 3+ characters (see D037, D038)
+- CSV export on the 200,000-row seed (2026-10-12; Release build, API and Docker PostgreSQL 17 on the same dev machine, AMD Ryzen 7 8840HS, 14 GB RAM; `curl.exe`; API process memory sampled every 20 ms, or 50 ms for the throttled run):
+  - Europe + Asia-Pacific, 95,924 rows, 9.10 MB: 265 ms (first call), then 238 / 179 / 197 ms. API working set rose by 0 to 8 MB and private bytes by 0 to 10 MB during a download.
+  - The same export with the client limited to 1 MB/s took 9.1 s; API working set and private bytes each rose by about 1 MB (136 samples), and the file was byte-identical to the fast run. The server streams rather than buffering the file.
+  - Above the limit (104,076 rows): 422 in 53 ms, no file sent.
 - Seed time, 200,000 rows (local Docker PostgreSQL 17, dev machine, single runs on 2026-10-11): generation 522 ms, binary COPY insert 3,274 ms in the service; about 5.6 s wall-clock for `dotnet run -- seed` including process start and migrate check
 - Import of a 100,000-row, 9.08 MB file via `POST /api/imports` (local dev machine, Docker PostgreSQL 17 with 200,000 existing orders, single runs on 2026-10-11): 6.4 s wall-clock for 100,000 rows imported (job duration 6.26 s); 4.6 s for the same file again with all 100,000 rows rejected as existing and 100,000 error rows written. API process working set went from 103 MB after startup to a peak of 180 MB (first upload) and 197 MB (second). Measured with `curl.exe` and the process peak working set, so rough.
 - Import of the same 100,000-row file after the P01 pipeline change (Release build, fresh API process per run, database re-seeded to 200,000 orders before each run, 3 runs each on 2026-10-11): before 5.81 / 5.99 / 6.29 s, after 4.39 to 4.51 s wall-clock; API peak working set before 171 to 181 MB, after 167 to 170 MB. Server-side log for one run: 4,190 ms total, of which scan 289 ms and final database steps 2,152 ms.
@@ -51,4 +55,4 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Next step
 
-Confirm CI is green on `#0009-drill-down`, merge to `dev`, then start M10 (CSV export of the filtered view) on a new `#0010-` branch.
+Confirm CI is green on `#0010-csv-export`, merge to `dev`, then start M11 (demo reset, states, responsive polish) on a new `#0011-` branch.
