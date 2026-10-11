@@ -65,6 +65,23 @@ public class OrderRowValidatorTests
     public void Invalid_dates_are_rejected(string date) =>
         AssertSingleError(Validate(Valid() with { OrderDate = date }), "order_date");
 
+    [Theory]
+    [InlineData("2026-10-11T00:00:00Z", "2026-10-11")] // 14:00 in UTC+14, same day
+    [InlineData("2026-10-11T09:59:59Z", "2026-10-11")] // 23:59:59 in UTC+14
+    [InlineData("2026-10-11T10:00:00Z", "2026-10-12")] // already the 12th in Kiribati
+    [InlineData("2026-10-11T23:30:00+02:00", "2026-10-12")] // offsets are normalized to UTC first
+    public void The_latest_allowed_date_is_today_in_the_earliest_time_zone(string now, string expected) =>
+        Assert.Equal(DateOnly.Parse(expected), OrderRowValidator.LatestAllowedDate(DateTimeOffset.Parse(now)));
+
+    [Fact]
+    public void An_order_dated_tomorrow_utc_is_accepted_once_it_is_today_somewhere()
+    {
+        var latest = OrderRowValidator.LatestAllowedDate(DateTimeOffset.Parse("2026-10-11T12:00:00Z"));
+
+        Assert.True(OrderRowValidator.Validate(Valid() with { OrderDate = "2026-10-12" }, latest).IsValid);
+        Assert.False(OrderRowValidator.Validate(Valid() with { OrderDate = "2026-10-13" }, latest).IsValid);
+    }
+
     // quantity
     [Theory]
     [InlineData("1")]

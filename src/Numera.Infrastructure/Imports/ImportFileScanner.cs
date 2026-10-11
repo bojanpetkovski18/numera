@@ -40,15 +40,11 @@ public static class ImportFileScanner
             return new ScanResult(header, 0, new ImportRejection(ImportRejectionKind.DuplicateColumns, message));
         }
 
-        var rows = 0;
-        await foreach (var _ in reader.ReadRecordsAsync(ct))
+        var rows = await reader.CountRecordsAsync(maxRows, ct);
+        if (rows > maxRows)
         {
-            rows++;
-            if (rows > maxRows)
-            {
-                var message = $"The file has more than {maxRows:N0} data rows, which is the import limit.";
-                return new ScanResult(header, rows, new ImportRejection(ImportRejectionKind.TooManyRows, message));
-            }
+            var message = $"The file has more than {maxRows:N0} data rows, which is the import limit.";
+            return new ScanResult(header, rows, new ImportRejection(ImportRejectionKind.TooManyRows, message));
         }
 
         return rows == 0

@@ -116,7 +116,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
 
     private async Task<ImportJobSummary> LoadAsync(ImportJob job, Stream file, string[] warnings, CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
+        var today = OrderRowValidator.LatestAllowedDate(clock.GetUtcNow());
         var errors = new List<ErrorRow>();
         var batch = new List<StagedRow>(BatchSize);
         var firstSeen = new Dictionary<(string OrderId, string Sku), int>();
