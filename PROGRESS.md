@@ -1,0 +1,41 @@
+# Numera Progress
+
+Update this file at the end of every milestone. Only record results that were actually verified.
+
+Session estimates are planning guesses (2-3 hours per session), not measurements. Replace them with real numbers after the first few milestones.
+
+| # | Milestone | Est. sessions | Status | Verified on | Notes |
+|---|---|---|---|---|---|
+| M01 | Repo, tooling, API skeleton, CI, Angular shell | 2 | partial | 2026-10-11 | API/web build and tests verified locally. PostgreSQL via compose and the CI run not verified (Docker daemon not running; repo not pushed). |
+| M02 | Database schema and seed generator | 2 | not started | | |
+| M03 | Authentication (JWT, demo user) | 1 | not started | | |
+| M04 | CSV import: upload and validation | 3 | not started | | |
+| M05 | CSV import: error report and import UI | 2 | not started | | |
+| M06 | Metrics endpoints (summary, timeseries, breakdown) | 2 | not started | | |
+| M07 | Dashboard UI (KPIs, charts, date filter) | 3 | not started | | |
+| M08 | Orders grid (API and UI) | 3 | not started | | |
+| M09 | Drill-down from charts to grid | 1 | not started | | |
+| M10 | CSV export of filtered view | 1 | not started | | |
+| M11 | Demo reset, states, responsive polish | 3 | not started | | |
+| M12 | E2E test, Docker, deploy, README, screenshots | 4 | not started | | |
+
+Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a week. Keep a buffer week.
+
+## Measured results (fill in only when measured)
+
+- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed (unit and integration projects) on 2026-10-11
+- Web build / test status: `npm run build` succeeded; `npm test -- --watch=false` passed on 2026-10-11
+- Query time for dashboard on seeded data: _not measured_
+- Import time for a 100,000-row file: _not measured_
+
+## Known issues
+
+- `docker compose up -d` has not been run: the Docker daemon was not running. Only `docker compose config` was validated.
+- The GitHub Actions workflow has not run; confirm after the first push.
+- Navigation between pages was verified by a component test and by the dev server returning the app, not by clicking in a real browser.
+- Global `ng` on this machine is v11; use the local CLI via `npm start` / `npm run build` in `web/`.
+- `ng serve` blocks on an analytics prompt in non-interactive shells; set `NG_CLI_ANALYTICS=false`.
+
+## Next step
+
+Start Docker Desktop and run `docker compose up -d`, push to GitHub to confirm CI, commit M01, then M02.
