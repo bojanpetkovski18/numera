@@ -326,6 +326,19 @@ public class ImportEndpointsTests(PostgresFixture postgres) : IClassFixture<Post
     }
 
     [Fact]
+    public async Task A_malformed_multipart_body_returns_400_not_413()
+    {
+        await using var api = await StartAsync();
+        var content = new StringContent("this is not a multipart body");
+        content.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/form-data; boundary=numera-boundary");
+
+        var response = await api.Client.PostAsync("/api/imports", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("multipart", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task A_non_multipart_request_returns_415()
     {
         await using var api = await StartAsync();

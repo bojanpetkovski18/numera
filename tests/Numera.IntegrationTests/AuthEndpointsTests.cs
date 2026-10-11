@@ -167,6 +167,30 @@ public class AuthEndpointsTests(PostgresFixture postgres) : IClassFixture<Postgr
     }
 
     [Fact]
+    public async Task Behind_a_proxy_the_login_rate_limit_is_per_forwarded_client_address()
+    {
+        var cs = await postgres.CreateDatabaseAsync();
+        await using var factory = new TestApiFactory(cs, loginPermitLimit: 2, new Dictionary<string, string> { ["ForwardedHeaders:Enabled"] = "true" });
+        var client = factory.CreateClient();
+
+        async Task<HttpStatusCode> AttemptFrom(string ip)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
+            {
+                Content = JsonContent.Create(new { email = DemoUser.Email, password = "wrong" }),
+            };
+            request.Headers.Add("X-Forwarded-For", ip);
+            return (await client.SendAsync(request)).StatusCode;
+        }
+
+        var first = new[] { await AttemptFrom("203.0.113.1"), await AttemptFrom("203.0.113.1"), await AttemptFrom("203.0.113.1") };
+        var other = await AttemptFrom("203.0.113.2");
+
+        Assert.Equal([HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized, HttpStatusCode.TooManyRequests], first);
+        Assert.Equal(HttpStatusCode.Unauthorized, other);
+    }
+
+    [Fact]
     public async Task Login_is_rate_limited_after_too_many_attempts()
     {
         await using var factory = await CreateFactoryAsync(loginPermitLimit: 3);

@@ -15,6 +15,16 @@ public class HealthEndpointTests
     }
 
     [Fact]
+    public async Task Responses_tell_browsers_not_to_sniff_the_content_type()
+    {
+        await using var factory = new TestApiFactory();
+
+        var response = await factory.CreateClient().GetAsync("/health");
+
+        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+    }
+
+    [Fact]
     public async Task Unknown_route_returns_401_for_anonymous_callers()
     {
         await using var factory = new TestApiFactory();
