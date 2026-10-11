@@ -7,6 +7,7 @@ using Numera.Application;
 using Numera.Application.Auth;
 using Numera.Application.Entities;
 using Numera.Infrastructure.Auth;
+using Numera.Infrastructure.Imports;
 using Numera.Infrastructure.Persistence;
 using Numera.Infrastructure.Seeding;
 
@@ -33,6 +34,7 @@ public static class DependencyInjection
 
         services.AddScoped<DemoSeeder>();
         services.AddScoped<DemoUserSeeder>();
+        services.AddScoped<ImportOrdersHandler>();
         return services;
     }
 }

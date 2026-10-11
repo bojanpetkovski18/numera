@@ -1,0 +1,11 @@
+order_id,order_date,customer_id,region,channel,product_sku,product_category,quantity,unit_price,discount,status
+T-0001,2025-03-01,C-001,Europe,Online Store,SKU-A,Blends,1,14.00,0,completed
+T-0002,2025-03-02,C-002,North America,Mobile App,SKU-B,Single Origin,2,18.50,0.05,completed
+T-0003,2025-03-03,C-003,Asia-Pacific,Marketplace,SKU-C,Equipment,1,89.00,0,refunded
+T-0004,2025-03-04,C-001,Europe,Online Store,SKU-A,Blends,3,14.00,0.1,completed
+T-0005,2025-03-05,C-004,Latin America,Wholesale,SKU-D,Subscriptions,10,16.00,0.15,cancelled
+T-0006,2025-03-06,C-005,Europe,Online Store,SKU-B,Single Origin,1,18.50,0,completed
+T-0007,2025-03-07,C-006,North America,Mobile App,SKU-E,Accessories,2,8.50,1,completed
+T-0008,2025-03-08,C-007,Europe,Marketplace,SKU-A,Blends,1,14.00,0,completed
+T-0009,2025-03-09,C-008,Asia-Pacific,Online Store,SKU-C,Equipment,1,0,0,completed
+T-0010,2025-03-10,C-009,North America,Online Store,SKU-D,Subscriptions,1,16.00,0,completed

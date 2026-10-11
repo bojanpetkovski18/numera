@@ -1,0 +1,11 @@
+order_id,order_date,customer_id,region,channel,product_sku,product_category,quantity,unit_price,discount,status
+M-0001,2025-04-01,C-001,Europe,Online Store,SKU-A,Blends,1,14.00,0,completed
+M-0002,2025-04-02,C-002,Europe,Online Store,SKU-B,Single Origin,2,18.50,0.05,completed
+M-0003,2025-04-03,C-003,Europe,Online Store,SKU-A,Blends,0,14.00,0,completed
+M-0004,2025-04-04,C-004,Europe,Online Store,SKU-A,Blends,1,14.00,1.01,completed
+M-0005,2999-01-01,C-005,Europe,Online Store,SKU-A,Blends,1,14.00,0,completed
+M-0006,2025-04-06,C-006,Europe,Online Store,SKU-A,Blends,1,14.00,0,shipped
+M-0001,2025-04-07,C-007,Europe,Online Store,SKU-A,Blends,1,14.00,0,completed
+M-0008,2025-04-08,C-008,Europe,Online Store,SKU-A,Blends,1,14.00,0,refunded
+M-0009,2025-04-09,C-009,Europe,Online Store,SKU-A,Blends,1,-5,0,unknown
+M-0010,2025-04-10,C-010,Europe,Online Store,SKU-A,Blends,4,14.00,0.2,completed

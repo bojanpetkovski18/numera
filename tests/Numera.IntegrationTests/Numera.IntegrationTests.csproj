@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\Fixtures\*.csv" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Numera.Api\Numera.Api.csproj" />
   </ItemGroup>
 

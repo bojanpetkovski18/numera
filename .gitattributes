@@ -1,0 +1,2 @@
+# Keep fixture bytes exactly as written (BOM, CRLF, empty file).
+tests/Fixtures/*.csv -text
