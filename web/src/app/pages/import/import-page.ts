@@ -1,7 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FileSaver } from '../../core/http/file-saver';
-import { problemMessage } from '../../core/http/problem';
+import { problemMessageFromBlob } from '../../core/http/problem';
 import { ImportJob } from './import.models';
 import { ImportStore } from './import.store';
 import { ImportsApi } from './imports-api';
@@ -76,9 +76,11 @@ export class ImportPage implements OnInit {
         this.saver.save(blob, `import-${job.id}-errors.csv`);
         this.downloadingId.set(null);
       },
-      error: (error: unknown) => {
+      error: async (error: unknown) => {
         this.downloadingId.set(null);
-        this.downloadError.set(problemMessage(error, 'The error report could not be downloaded. Try again.'));
+        this.downloadError.set(
+          await problemMessageFromBlob(error, 'The error report could not be downloaded. Try again.'),
+        );
       },
     });
   }
