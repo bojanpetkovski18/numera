@@ -176,6 +176,25 @@ public class ImportEndpointsTests(PostgresFixture postgres) : IClassFixture<Post
     }
 
     [Fact]
+    public async Task Concurrent_uploads_of_the_same_file_import_each_row_exactly_once()
+    {
+        await using var api = await StartAsync();
+        var file = Fixture("valid-orders.csv");
+
+        var responses = await Task.WhenAll(
+            UploadAsync(api.Client, file, "a.csv"),
+            UploadAsync(api.Client, file, "b.csv"),
+            UploadAsync(api.Client, file, "c.csv"));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
+        var summaries = await Task.WhenAll(responses.Select(ReadSummaryAsync));
+        Assert.Equal(10, summaries.Sum(s => s.ImportedRows));
+        Assert.Equal(20, summaries.Sum(s => s.RejectedRows));
+        await using var db = Db(api);
+        Assert.Equal(10, await db.Context.Orders.CountAsync());
+    }
+
+    [Fact]
     public async Task Bom_crlf_and_quoted_fields_import_correctly()
     {
         await using var api = await StartAsync();
