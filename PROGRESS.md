@@ -15,7 +15,7 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 | M06 | Metrics endpoints (summary, timeseries, breakdown) | 2 | complete locally | 2026-10-11 | Definitions documented, endpoints, unit and Testcontainers tests against hand-computed data, EXPLAIN findings and HTTP timings on the seed. CI run pending. |
 | M07 | Dashboard UI (KPIs, charts, date filter) | 3 | complete locally | 2026-10-11 | Dashboard, filter bar with URL sync, component and unit tests, and a headless-Edge run at 1280, 768 and 375 px with no console errors. CI run pending. |
 | M08 | Orders grid (API and UI) | 3 | complete locally | 2026-10-11 | Orders API with paging, whitelisted sort, filters and trigram-indexed search; grid UI with URL state; unit, Testcontainers and component tests; query plans and HTTP timings on the seed; a headless-Edge run at 1280, 768 and 375 px with no console errors. CI run pending. |
-| M09 | Drill-down from charts to grid | 1 | not started | | |
+| M09 | Drill-down from charts to grid | 1 | complete locally | 2026-10-11 | Click, keyboard and data-table drill-downs from all three charts; filter chips and a back link on the grid; back/forward and scroll fixes; unit, component and Testcontainers consistency tests; a headless-Edge run of every drill path, numbers compared with the dashboard, at 1280 and 375 px with no console errors. CI run pending. |
 | M10 | CSV export of filtered view | 1 | not started | | |
 | M11 | Demo reset, states, responsive polish | 3 | not started | | |
 | M12 | E2E test, Docker, deploy, README, screenshots | 4 | not started | | |
@@ -24,8 +24,8 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Measured results (fill in only when measured)
 
-- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (160 unit tests, 151 integration tests against PostgreSQL 17 via Testcontainers)
-- Web build / test status: `npm run build` succeeded (initial bundle 348.41 kB raw / 93.24 kB transferred; dashboard chunk 187.50 kB / 56.83 kB and orders chunk 16.63 kB / 4.86 kB, both lazy); `npm test -- --watch=false` passed on 2026-10-11 (88 tests in 16 files)
+- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (160 unit tests, 161 integration tests against PostgreSQL 17 via Testcontainers)
+- Web build / test status: `npm run build` succeeded (initial bundle 355.94 kB raw / 94.99 kB transferred; dashboard chunk 191.32 kB / 57.86 kB and orders chunk 21.41 kB / 6.13 kB, both lazy); `npm test -- --watch=false` passed on 2026-10-11 (112 tests in 17 files)
 - Metrics endpoint time on the 200,000-row seed (2026-10-11; Release build, API and Docker PostgreSQL 17 on the same Windows 11 dev machine; warm; 20 HTTP calls each with `curl.exe`, time to full response; median / p90):
   - summary, all data: 75.8 / 85.7 ms; one month: 10.0 / 11.4 ms; one region: 15.2 / 16.8 ms
   - timeseries, all data by month (24 points): 127.1 / 137.4 ms; by day (730 points): 126.3 / 132.4 ms; one year by week: 72.0 / 76.9 ms
@@ -47,7 +47,8 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 - A 100,000-row file fits the 10 MB limit only if rows average about 104 bytes or less; the Import page now says so.
 - Forwarded headers are off by default; enable `ForwardedHeaders:Enabled` only when deploying behind a trusted proxy (M12).
 - Global `ng` on this machine is v11; use the local CLI via `npm start` / `npm run build` in `web/`.
+- Browser Back to the dashboard lands at the top of the page, not the previous scroll position: the charts are still loading when the router restores it (D043).
 
 ## Next step
 
-Confirm CI is green on `#0008-orders-grid`, merge to `dev`, then start M09 (drill-down from charts to grid) on a new `#0009-` branch.
+Confirm CI is green on `#0009-drill-down`, merge to `dev`, then start M10 (CSV export of the filtered view) on a new `#0010-` branch.

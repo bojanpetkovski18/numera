@@ -58,4 +58,15 @@ Timeseries details:
 
 Breakdown details: groups that have only refunded or cancelled lines are listed with zero revenue and zero orders.
 
+## Drill-down
+
+Clicking a chart item (or its data-table link) opens `/orders` with the dashboard filter narrowed to that item, plus `status=completed`:
+
+| Chart item | Filter change |
+|---|---|
+| Category, region or channel bar | that dimension = the bar's key |
+| Day, week or month point | `from`/`to` = the period (weeks Monday to Sunday, months to the last day) intersected with the active range |
+
+The rows shown are then exactly the data behind the clicked value: their count equals `completedLines` from the summary for the same filter, their distinct `order_id` count equals the item's `orders`, and their line revenue sums to the item's `revenue` (DECISIONS D041).
+
 All aggregation runs in PostgreSQL in a single statement per request (`SUM ... FILTER`, `COUNT(DISTINCT ...)`, `generate_series`); no rows are loaded into the application.
