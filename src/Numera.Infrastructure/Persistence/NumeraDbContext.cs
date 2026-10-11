@@ -1,11 +1,12 @@
 ﻿using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Numera.Application;
 using Numera.Application.Entities;
 
 namespace Numera.Infrastructure.Persistence;
 
-public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) : DbContext(options)
+public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) : DbContext(options), INumeraDbContext
 {
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
