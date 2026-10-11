@@ -333,4 +333,24 @@ Measured with `EXPLAIN (ANALYZE)` on the local Docker PostgreSQL 17 after `ANALY
 - Router scroll restoration is enabled, so a new page opens at the top: a drill-down from the bottom of the dashboard on a phone used to open the grid half-way down its cards, hiding the filter chips. The URL-sync navigation passes `scroll: 'manual'` (Angular 22), so changing a filter, sort or page keeps the scroll position.
 - Known limit: Back to the dashboard lands at the top rather than the previous position, because the charts are still loading (the page is shorter) when the router restores it.
 
-_Add new decisions below as D044, D045, ..._
+## D044: Export is the grid query, streamed from one snapshot
+
+- **Same query:** `GET /api/orders/export` takes the grid's parameters (filters, `status`, `q`, `sort`, `dir`; paging is ignored). The grid and the export build their SQL with one shared helper (`OrdersSql`), so they cannot drift. An integration test compares the export with the grid read page by page, cell by cell and in order, for several filter and sort combinations.
+- **One snapshot:** the export opens a read-only REPEATABLE READ transaction, counts, then streams the rows in the same transaction. The size check and the file therefore always describe the same data, even while an import runs.
+- **Streaming:** each row goes from the Npgsql reader through a 64 KB `StreamWriter` into the response body; the result is never collected. Measured on the seed: 95,924 rows (9.1 MB) in 180–265 ms, with the API's memory up by 0–10 MB. With the client throttled to 1 MB/s (9.1 s), memory rose by about 1 MB, so the server holds no more than its buffers while a slow client downloads.
+- **Limit:** at most 100,000 rows, the same as the import. More is refused with a 422 problem (`rowCount`, `maxRows`, a message saying to narrow the filters) before any CSV is sent, not truncated: a truncated file would silently hold less than the grid, which breaks "exactly what the grid shows". The grid knows its total, so the button is disabled above the limit with the reason shown. The unfiltered seed (200,000 rows) is above the limit by design.
+- `Cache-Control: no-store`, because the file is the user's data.
+
+## D045: Export file format and name
+
+- **Columns:** the import columns in the same order, then `line_total`. An export can be imported again: the importer ignores `line_total` with a warning. ISO dates; plain invariant decimals (`18.50`, discount `0.1`, no currency or thousands separators); lowercase status; RFC 4180 quoting; CRLF line ends; UTF-8 with a BOM so Excel shows non-ASCII text correctly.
+- **CSV injection:** every text cell goes through `CsvCell`, which prefixes `=`, `+`, `-`, `@`, tab and CR with an apostrophe. Numbers are formatted by the server and never start with those characters.
+- **Name:** `numera-orders_{yyyyMMdd-HHmmss}Z_{filters}.csv`, for example `numera-orders_20261011-234750Z_europe_wholesale_refunded.csv`. UTC, because a server-local time would be ambiguous. The filter part is reduced to lowercase letters, digits and dashes and capped at 80 characters, so it is safe in a header and on any file system. With no filter it is `all`.
+
+## D046: Downloading with the token
+
+- A plain link cannot send the bearer token, so the web app fetches the file with `HttpClient` (`responseType: 'blob'`) and saves it through `FileSaver`, as the import error report does. The browser holds the file in memory once (about 9 MB at the limit), which is acceptable at this size. A one-time signed download URL would stream to disk, but needs token issuing and expiry for little gain here.
+- The file name comes from `Content-Disposition` (path separators removed) and the row count from `X-Row-Count`. The CORS policy is set to expose both headers for a separately hosted front end; this is not exercised yet, because locally the app is served from the same origin through the dev proxy (check in M12).
+- **States:** "Exporting…" with a spinner and `aria-busy` while the request runs; a status message with the row count and file name when done; an alert with the server's problem detail on failure. Messages hide once the filters change, so they never describe another view.
+
+_Add new decisions below as D047, D048, ..._

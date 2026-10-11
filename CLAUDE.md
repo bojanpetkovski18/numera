@@ -49,6 +49,7 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 - Import history and error report: `GET /api/imports` (recent jobs) and `GET /api/imports/{id}/errors.csv`; a sample CSV is served from the web app at `/sample-orders.csv`
 - Metrics (filters `from`, `to`, `region`, `channel`, `category`; repeat a key for any-of): `GET /api/metrics/summary`, `/timeseries?granularity=day|week|month`, `/breakdown?by=category|region|channel`. Definitions are in `docs/ARCHITECTURE.md`
 - Orders grid: `GET /api/orders` (same filters plus `status`, `q` for order ID contains-search, `sort` (column name), `dir=asc|desc`, `page`, `pageSize` up to 100)
+- Export the grid view as CSV: `GET /api/orders/export` (same parameters as `/api/orders` without paging; at most 100,000 rows, otherwise 422), for example `curl -o orders.csv -H "Authorization: Bearer <token>" "http://localhost:5080/api/orders/export?region=Europe&region=Asia-Pacific"`
 - Filter choices for the UI: `GET /api/filter-options` (distinct regions, channels, categories and the data's date range)
 - Demo login: `demo@numera.example` / `Demo-Pass-2026!` (documented demo values; created by `migrate` and `seed`)
 - Seed DB (reset, then ~200,000 rows): `dotnet run --project src/Numera.Api -- seed`
