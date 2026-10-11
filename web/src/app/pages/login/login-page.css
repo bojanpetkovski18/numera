@@ -1,0 +1,116 @@
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5) var(--space-4);
+}
+
+.card {
+  width: 100%;
+  max-width: 26rem;
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-accent);
+  border-radius: var(--radius-md);
+}
+
+.brand {
+  margin: 0 0 var(--space-3);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+}
+
+h1 {
+  font-size: var(--font-size-xl);
+}
+
+.lede {
+  margin: var(--space-2) 0 var(--space-5);
+  color: var(--color-muted);
+}
+
+.demo {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.demo-title {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+}
+
+dl {
+  margin: 0 0 var(--space-3);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+dt {
+  color: var(--color-muted);
+}
+
+dd {
+  margin: 0;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+label {
+  display: block;
+  margin-top: var(--space-4);
+  font-weight: var(--font-weight-medium);
+}
+
+input {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: var(--space-1);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+button {
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.primary {
+  width: 100%;
+  margin-top: var(--space-5);
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+}
+
+.secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.error {
+  margin: var(--space-4) 0 0;
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}

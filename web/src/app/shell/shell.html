@@ -1,4 +1,4 @@
-﻿<div class="shell">
+<div class="shell">
   <header class="topbar">
     <button
       type="button"
@@ -12,6 +12,7 @@
     </button>
     <span class="topbar-title">Harbor &amp; Pine Coffee</span>
     <span class="topbar-note">Demo data · fictional</span>
+    <button type="button" class="logout" (click)="logout()">Sign out</button>
   </header>
 
   <nav id="primary-nav" class="sidebar" [class.open]="navOpen()" aria-label="Primary">
@@ -35,3 +36,4 @@
     <router-outlet />
   </main>
 </div>
+
