@@ -1,2 +1,9 @@
+# Normalize text files to LF in the repository and the working tree (matches .editorconfig).
+* text=auto eol=lf
+
 # Keep fixture bytes exactly as written (BOM, CRLF, empty file).
 tests/Fixtures/*.csv -text
+
+# Binary assets
+*.png binary
+*.ico binary

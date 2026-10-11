@@ -114,6 +114,38 @@ public sealed class OrderCsvReader : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Counts the remaining data rows without building them, stopping once <paramref name="stopAfter"/> is exceeded.
+    /// A row the parser cannot read counts as one row (it is rejected in the load pass).
+    /// </summary>
+    public async Task<int> CountRecordsAsync(int stopAfter, CancellationToken ct = default)
+    {
+        if (Header is null || !Header.IsValid)
+        {
+            return 0;
+        }
+
+        var count = 0;
+        while (count <= stopAfter)
+        {
+            ct.ThrowIfCancellationRequested();
+            var (hasRecord, parseError) = await ReadNextAsync();
+            if (parseError is not null)
+            {
+                return count + 1;
+            }
+
+            if (!hasRecord)
+            {
+                break;
+            }
+
+            count++;
+        }
+
+        return count;
+    }
+
     private async Task<(bool HasRecord, string? Error)> ReadNextAsync()
     {
         try

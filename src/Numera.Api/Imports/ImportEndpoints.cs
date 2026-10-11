@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Numera.Application.Imports;
 using Numera.Infrastructure.Imports;
 
@@ -6,6 +7,9 @@ namespace Numera.Api.Imports;
 public static class ImportEndpoints
 {
     private const string FileField = "file";
+
+    /// <summary>The 10 MB file plus headroom for multipart headers and boundaries.</summary>
+    public const long MaxUploadRequestBytes = ImportLimits.MaxFileBytes + 64 * 1024;
 
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -22,7 +26,9 @@ public static class ImportEndpoints
         var group = app.MapGroup("/api/imports");
 
         // Antiforgery is for cookie-authenticated browsers; this API authenticates with a bearer token.
-        group.MapPost("/", UploadAsync).DisableAntiforgery();
+        group.MapPost("/", UploadAsync)
+            .DisableAntiforgery()
+            .WithMetadata(new RequestSizeLimitAttribute(MaxUploadRequestBytes));
         group.MapGet("/", ListAsync);
         group.MapGet("/{id:guid}", GetAsync);
         group.MapGet("/{id:guid}/errors.csv", ErrorReportAsync);
@@ -30,7 +36,11 @@ public static class ImportEndpoints
         return app;
     }
 
-    private static async Task<IResult> UploadAsync(HttpRequest request, ImportOrdersHandler handler, CancellationToken ct)
+    private static async Task<IResult> UploadAsync(
+        HttpRequest request,
+        ImportOrdersHandler handler,
+        IHostApplicationLifetime lifetime,
+        CancellationToken ct)
     {
         if (!request.HasFormContentType)
         {
@@ -45,13 +55,23 @@ public static class ImportEndpoints
         {
             form = await request.ReadFormAsync(ct);
         }
-        catch (InvalidDataException)
+        catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            // Kestrel's request body limit. Must come before the IOException clause: it derives from IOException.
+            return TooLarge();
+        }
+        catch (InvalidDataException ex) when (ex.Message.Contains("limit", StringComparison.OrdinalIgnoreCase))
         {
             return TooLarge();
         }
-        catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        catch (Exception ex) when (ex is InvalidDataException or IOException)
         {
-            return TooLarge();
+            // Malformed multipart (bad boundary, truncated body). An aborted upload also lands here; the client is
+            // gone by then, so the response does not matter.
+            return Problem(
+                StatusCodes.Status400BadRequest,
+                "Malformed upload",
+                "The multipart form data could not be read. Upload the file again.");
         }
 
         var file = form.Files.GetFile(FileField) ?? form.Files.FirstOrDefault();
@@ -87,7 +107,10 @@ public static class ImportEndpoints
                 "The file does not look like a text CSV.");
         }
 
-        var result = await handler.HandleAsync(stream, fileName, ct);
+        // The file is fully received at this point. Processing is not tied to the request, so a client that
+        // disconnects (closed tab, flaky network) does not roll back an import that is already running;
+        // only application shutdown cancels it.
+        var result = await handler.HandleAsync(stream, fileName, lifetime.ApplicationStopping);
 
         if (result.Rejection is { } rejection)
         {

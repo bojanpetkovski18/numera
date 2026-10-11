@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Numera.Api.Auth;
 using Numera.Api.Imports;
 using Numera.Application;
@@ -22,10 +23,25 @@ builder.Logging.AddJsonConsole();
 
 builder.Services.AddProblemDetails();
 
-// Upload limits (spec: 10 MB). Each multipart part is capped at the file limit; the request body gets a little
-// headroom for the multipart envelope.
+// Request size limits: 1 MB for every endpoint by default; the import endpoint raises its own limit to the
+// 10 MB file size plus room for the multipart envelope (see ImportEndpoints). Each multipart part is capped at
+// the file limit.
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = ImportLimits.MaxFileBytes);
-builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = ImportLimits.MaxFileBytes + 1024 * 1024);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = Program.DefaultMaxRequestBodyBytes);
+
+// Behind a reverse proxy, the client IP (used by the login rate limit) arrives in X-Forwarded-For.
+// Off by default; enable only when the API is reachable exclusively through a trusted proxy.
+var useForwardedHeaders = builder.Configuration.GetValue("ForwardedHeaders:Enabled", false);
+if (useForwardedHeaders)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1; // only trust the address appended by the nearest proxy
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -112,6 +128,17 @@ if (args.Contains("migrate") || args.Contains("seed"))
 // Fail fast with a clear message if the JWT settings (notably Jwt__SigningKey) are missing or too short.
 _ = app.Services.GetRequiredService<IOptions<JwtOptions>>().Value;
 
+if (useForwardedHeaders)
+{
+    app.UseForwardedHeaders();
+}
+
+app.Use(async (context, next) =>
+{
+    // Stops browsers from guessing a different content type (relevant for the CSV downloads).
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    await next(context);
+});
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseCors();
@@ -127,4 +154,7 @@ app.MapImportEndpoints();
 app.Run();
 
 // Exposed so integration tests can use WebApplicationFactory<Program>.
-public partial class Program;
+public partial class Program
+{
+    public const long DefaultMaxRequestBodyBytes = 1024 * 1024;
+}

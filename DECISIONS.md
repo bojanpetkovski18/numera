@@ -140,9 +140,9 @@ One entry per meaningful decision. Format: context, decision, alternatives, trad
   - The job row is created and committed first (so a failure is always recorded).
   - The file is scanned once for header and row-count problems without touching the data tables.
   - Valid rows, error rows and the job's final counts are then written in a single transaction: all-or-nothing for the data, while bad rows are recorded, never fatal.
-  - Valid rows are streamed in batches of 5,000 through a temporary staging table (binary `COPY`) and moved into `orders` with `INSERT ... ON CONFLICT (order_id, product_sku) DO NOTHING RETURNING`. Rows that did not come back already existed.
+  - Valid rows are streamed in batches of 5,000 through a temporary staging table (binary `COPY`) and moved into `orders` with `INSERT ... ON CONFLICT (order_id, product_sku) DO NOTHING RETURNING`. Rows that did not come back already existed. **Superseded by D028** (single COPY, anti-join, advisory lock).
 - **Alternatives:** Per-batch transactions (partial imports on failure), pre-checking existing keys with a `SELECT` (race-prone), EF `AddRange` (slow).
-- **Trade-offs:** One long transaction for up to 100,000 rows (a few seconds). The conflict detection is race-proof because the unique index decides.
+- **Trade-offs:** One long transaction for up to 100,000 rows (a few seconds). Race safety now comes from serializing imports (D028).
 
 ## D021: Rows that already exist are rejected, not updated
 
@@ -152,7 +152,7 @@ One entry per meaningful decision. Format: context, decision, alternatives, trad
 
 ## D022: Validation details beyond the spec text
 
-- Dates must be `yyyy-MM-dd`; other formats are rejected because `03/04/2025` is ambiguous. "Not in the future" is compared with today's UTC date.
+- Dates must be `yyyy-MM-dd`; other formats are rejected because `03/04/2025` is ambiguous. "Not in the future" means not later than today in the earliest time zone, UTC+14 (D030; originally today's UTC date).
 - `status` is matched case-insensitively and stored lowercase.
 - `unit_price` allows at most 2 decimals and `discount` at most 3, matching `numeric(12,2)` and `numeric(4,3)`; values are never silently rounded. Quantity must be a whole number (`2.0` is rejected).
 - Text fields are trimmed, required, and limited to their column lengths.
@@ -196,4 +196,39 @@ One entry per meaningful decision. Format: context, decision, alternatives, trad
   - API problem details (`detail`, then `title`) are shown to the user as written.
 - **Trade-offs:** The whole report is held in the browser as a blob before saving, which is fine for at most 100,000 error lines of 2,000 characters.
 
-_Add new decisions below as D028, D029, ..._
+## D028: Import pipeline revised: one COPY, set-based duplicate check, serialized imports
+
+- **Context:** Phase timing showed database work was about 4.9 s of a 5.5 s, 100,000-row import. Measured in PostgreSQL on 100,000 staged rows (rolled back): `INSERT ... ON CONFLICT DO NOTHING` 2.34 s (with or without `RETURNING`), plain `INSERT` 0.88 s, anti-join `DELETE ... USING orders` 0.08 s.
+- **Decision:**
+  - All valid rows (with their raw text) stream into the temporary staging table through one binary `COPY`; no batches are held in application memory.
+  - One CTE moves staging rows whose key already exists into `import_errors`.
+  - A plain `INSERT ... SELECT` moves the rest into `orders`.
+  - `pg_advisory_xact_lock` serializes imports so no other transaction can add the same keys in between; a test runs three concurrent uploads of the same file.
+  - The handler checks that inserted plus already-existing rows equals the staged count.
+- **Result (Release build, local Docker PostgreSQL, 3 runs each):** 5.8–6.3 s became 4.4–4.5 s per 100,000-row import; peak working set 171–181 MB became 167–170 MB. Synchronous `COPY` field writes were also tried and made no measurable difference, so the async API stays.
+- **Trade-offs:** Concurrent imports wait for each other instead of running in parallel (fine for a single-user demo; each takes a few seconds).
+
+## D029: Request hardening
+
+- **Decision:**
+  - Request bodies are limited to 1 MB by default (Kestrel); only `POST /api/imports` raises its limit to 10 MB plus 64 KB for the multipart envelope, via `RequestSizeLimitAttribute` metadata. Verified on real Kestrel: a 2 MB login body gets 413, a 9 MB CSV imports, an 11 MB upload gets a 413 problem.
+  - Malformed multipart bodies return 400 problem details. Previously they surfaced as a 500, because the framework throws an `IOException`. Kestrel's 413 exception is also an `IOException`, so it is caught first.
+  - Once the upload has been received, the import runs with the application-stopping token instead of the request token, so a client that disconnects no longer rolls back a running import.
+  - Every response carries `X-Content-Type-Options: nosniff`.
+  - Optional `ForwardedHeaders:Enabled` (default off) makes the login rate limit use the client address from `X-Forwarded-For`, trusting only the nearest proxy (`ForwardLimit = 1`). Enable it only when the API is reachable solely through that proxy (deployment, M12).
+  - EF Core's per-command SQL logging is set to Warning so normal operation does not log every statement.
+
+## D030: "Not in the future" means today in the earliest time zone
+
+- **Context:** Comparing `order_date` with the server's UTC date rejected orders dated "today" for users ahead of UTC for up to 14 hours.
+- **Decision:** The latest accepted date is today's date in UTC+14 (`OrderRowValidator.LatestAllowedDate`), so an order dated today anywhere in the world is accepted; a date that is in the future everywhere is still rejected.
+- **Trade-offs:** For a few hours a day, a date that is "tomorrow" for a UTC user is accepted.
+
+## D031: Developer tooling fixes
+
+- `dotnet-ef` is pinned to 10.0.12 in a repo-local tool manifest (`dotnet-tools.json`; run `dotnet tool restore`), replacing a stale global 10.0.7.
+- `angular.json` sets `cli.analytics: false`, so `ng serve` no longer blocks on a prompt in non-interactive shells.
+- The API's launch profile uses port 5080, matching the Angular dev proxy, so `dotnet run` and `npm start` work together without extra flags (previously the profile used 5131).
+- `.gitattributes` normalizes text files to LF (matching `.editorconfig`) and keeps CSV fixtures byte-exact.
+
+_Add new decisions below as D032, D033, ..._

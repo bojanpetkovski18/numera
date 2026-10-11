@@ -43,6 +43,10 @@
     <li><strong>status</strong>: completed, refunded or cancelled</li>
     <li>An order_id and product_sku pair may appear only once, and is skipped if it was already imported.</li>
     <li>Unknown columns are ignored with a warning.</li>
+    <li>
+      Both limits apply: rows longer than about 100 characters on average reach 10 MB before 100,000 rows.
+      Split very large files into several imports.
+    </li>
   </ul>
 </details>
 
@@ -164,7 +168,7 @@
                 <strong class="file-name">{{ job.fileName }}</strong>
                 <span class="meta">{{ job.createdAt | date: 'medium' }}</span>
               </div>
-              <span class="badge" [class]="'badge ' + job.status">{{ job.status }}</span>
+              <span class="badge {{ job.status }}">{{ job.status }}</span>
               <span class="numbers">
                 {{ job.importedRows | number }} imported · {{ job.rejectedRows | number }} rejected
               </span>

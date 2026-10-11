@@ -162,6 +162,24 @@ describe('ImportPage', () => {
     expect(saved[0].name).toBe('import-22222222-2222-2222-2222-222222222222-errors.csv');
   });
 
+  it('shows the API message when the error report download fails', async () => {
+    await setup([job({ id: '33333333-3333-3333-3333-333333333333', importedRows: 1, rejectedRows: 1 })]);
+
+    button('Download error report')!.click();
+    http
+      .expectOne('/api/imports/33333333-3333-3333-3333-333333333333/errors.csv')
+      .flush(new Blob([JSON.stringify({ title: 'Import not found', detail: 'No import exists with that id.' })]), {
+        status: 404,
+        statusText: 'Not Found',
+      });
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(root.querySelector('p[role="alert"]')?.textContent).toContain('No import exists with that id.');
+    expect(saved).toHaveLength(0);
+  });
+
   it('shows the API problem detail when the import is rejected', async () => {
     await setup();
     await chooseFile(csvFile());

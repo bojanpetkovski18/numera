@@ -19,6 +19,7 @@
 }
 
 .topbar-title {
+  min-width: 0;
   font-weight: var(--font-weight-bold);
 }
 
@@ -130,6 +131,8 @@ li a.active {
 }
 
 .logout {
+  flex-shrink: 0;
+  white-space: nowrap;
   min-height: 2.75rem;
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border);

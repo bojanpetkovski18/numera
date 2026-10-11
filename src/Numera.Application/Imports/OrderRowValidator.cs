@@ -50,6 +50,15 @@ public static class OrderRowValidator
     private const int NameMaxLength = 60;
     private const decimal MaxUnitPrice = 9_999_999_999.99m;
 
+    /// <summary>
+    /// The latest order date accepted as "not in the future": today's date in the earliest time zone (UTC+14),
+    /// so an order placed today anywhere in the world is accepted whatever the server's clock zone.
+    /// </summary>
+    public static DateOnly LatestAllowedDate(DateTimeOffset now) =>
+        DateOnly.FromDateTime(now.UtcDateTime.AddHours(14));
+
+    /// <param name="raw">The row as read from the file.</param>
+    /// <param name="today">The latest allowed order date; normally <see cref="LatestAllowedDate"/>.</param>
     public static RowValidationResult Validate(RawOrderRow raw, DateOnly today)
     {
         var errors = new List<RowError>();
