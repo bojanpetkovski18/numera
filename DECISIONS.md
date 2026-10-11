@@ -311,4 +311,26 @@ Measured with `EXPLAIN (ANALYZE)` on the local Docker PostgreSQL 17 after `ANALY
 - On wider screens the table scrolls inside its card with a sticky header. At 1280 px with the sidebar open, the last columns scroll horizontally inside the table region; the region is focusable so keyboard users can scroll it. The page itself never scrolls sideways (checked at 1280, 768 and 375 px).
 - Sortable headers are buttons inside `th` elements that carry `aria-sort`, so screen readers announce the current sort and keyboard users can sort with Enter or Space.
 
-_Add new decisions below as D041, D042, ..._
+## D041: What a drill-down shows
+
+- **Status:** a drill-down adds `status=completed`, so the grid shows the completed lines that make up the clicked revenue. The bars and points show completed revenue, so these are "exactly the matching rows" (spec). Without the status, refunded and cancelled lines of the same segment would appear and the row count would not match anything on the dashboard. The status shows as a removable chip. When a drill-down has no completed lines, the empty state says so and offers "Show all statuses".
+- **Count that must match:** the number of grid rows equals the summary's `completedLines` for the drilled filter. The distinct order ids among those rows equal the clicked value's `orders`, and the revenue recomputed from the rows equals its `revenue`. `DrillDownConsistencyTests` checks all three for every point and bar of several charts, including partial first and last periods.
+- **Breakdown bar:** the clicked dimension is set to the bar's key; the date range and the other dimensions are kept. If that dimension already had several values, it narrows to the one clicked.
+- **Time point:** the date range becomes the period, Monday to Sunday for weeks and the 1st to the last day for months, intersected with the active range. The API cuts periods at calendar boundaries, so the first and last points can cover part of a period only; the intersection is exactly what the point was computed from. Presets become explicit dates, because the drilled view is a specific period.
+- **Navigation:** a normal (pushed) navigation to `/orders` with the filter in the query string, so the link is shareable and the browser Back button returns to the dashboard.
+- The rule lives in one pure, unit-tested module (`drill-down.ts`); the integration test mirrors it.
+
+## D042: Chart interaction: click, keyboard and table links
+
+- A click anywhere in a bar's row, or nearest a point on the time axis, opens that item. Thin bars and the 730-point day chart are still easy targets. The cursor turns into a pointer over items, and a line under each chart says what a click does.
+- **Keyboard:** each selectable chart canvas is focusable. The arrow keys, Home and End move between items and show the item's tooltip; a polite live region announces it ("Europe: $1,040,832.40, 3,956 orders. Press Enter to open."). Enter or Space opens it; Escape clears the highlight.
+- **Screen readers:** the "Show data table" rows are now links to the same drill-downs, a standard path that does not depend on the canvas.
+- Chart.js stays behind `ChartCanvas`. The widgets pass one description per item and receive the selected index; they do not handle canvas events themselves.
+
+## D043: Back/forward and scroll behavior
+
+- Back/forward now restores the page's own filters even when its URL has none (`Router.currentNavigation().trigger === 'popstate'`). Before, the "keep the filters from the other page" rule (D039) meant Back from a drill-down showed the default dashboard with the drilled filters still applied.
+- Router scroll restoration is enabled, so a new page opens at the top: a drill-down from the bottom of the dashboard on a phone used to open the grid half-way down its cards, hiding the filter chips. The URL-sync navigation passes `scroll: 'manual'` (Angular 22), so changing a filter, sort or page keeps the scroll position.
+- Known limit: Back to the dashboard lands at the top rather than the previous position, because the charts are still loading (the page is shorter) when the router restores it.
+
+_Add new decisions below as D044, D045, ..._

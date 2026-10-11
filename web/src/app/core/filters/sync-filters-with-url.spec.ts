@@ -1,3 +1,5 @@
+import { Location } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, RouterOutlet, provideRouter } from '@angular/router';
@@ -27,7 +29,16 @@ describe('syncFiltersWithUrl', () => {
 
   beforeEach(async () => {
     pageState.set({ sort: null });
-    TestBed.configureTestingModule({ imports: [Host], providers: [provideRouter([{ path: 'p', component: SyncedPage }])] });
+    TestBed.configureTestingModule({
+      imports: [Host],
+      providers: [
+        provideRouter([
+          { path: 'p', component: SyncedPage },
+          { path: 'q', component: SyncedPage },
+        ]),
+        provideLocationMocks(),
+      ],
+    });
     fixture = TestBed.createComponent(Host);
   });
 
@@ -55,6 +66,23 @@ describe('syncFiltersWithUrl', () => {
     await settle();
     expect(TestBed.inject(FilterStore).regions()).toEqual([]);
     expect(TestBed.inject(FilterStore).channels()).toEqual(['Mobile App']);
+    fixture.destroy();
+  });
+
+  it('back after a drill-down restores the previous page without the drilled filters', async () => {
+    const router = TestBed.inject(Router);
+    router.initialNavigation(); // starts listening to back/forward, as the app does on startup
+    await router.navigateByUrl('/p'); // the default view: no filter params
+    await settle();
+    await router.navigateByUrl('/q?region=Europe&status=completed'); // a drill-down to another page
+    await settle();
+    expect(TestBed.inject(FilterStore).regions()).toEqual(['Europe']);
+
+    TestBed.inject(Location).back();
+    await settle();
+
+    expect(router.url).toBe('/p');
+    expect(TestBed.inject(FilterStore).regions()).toEqual([]);
     fixture.destroy();
   });
 });

@@ -217,6 +217,80 @@ describe('OrdersPage', () => {
     request.flush(page([row(1)], 1));
   });
 
+  describe('arriving from a drill-down', () => {
+    const DRILL = '/orders?from=2025-03-31&to=2025-04-06&region=Europe&status=completed';
+    const chipTexts = () => Array.from(root().querySelectorAll('app-filter-chips li > span')).map((s) => s.textContent?.trim());
+
+    it('requests exactly the drilled rows and shows why as chips, with a way back to the dashboard', async () => {
+      await open(DRILL);
+
+      const params = ordersRequest().request.params;
+      expect([params.get('from'), params.get('to'), params.getAll('region'), params.getAll('status')]).toEqual([
+        '2025-03-31', '2025-04-06', ['Europe'], ['completed'],
+      ]);
+      expect(chipTexts()).toEqual(['Date: Mar 31, 2025 – Apr 6, 2025', 'Region: Europe', 'Status: Completed']);
+      expect(root().querySelector('a.back')?.getAttribute('href')).toBe('/dashboard?from=2025-03-31&to=2025-04-06&region=Europe');
+    });
+
+    it('removing a chip drops that filter, starts from page 1 and keeps the focus nearby', async () => {
+      await open(`${DRILL}&page=3`);
+      await respond(page([row(1)], 120, 3));
+
+      const remove = root().querySelector<HTMLButtonElement>('button[aria-label="Remove filter Region: Europe"]')!;
+      remove.focus();
+      remove.click();
+      await settle(fixture);
+
+      const params = ordersRequest().request.params;
+      expect(params.has('region')).toBe(false);
+      expect([params.get('from'), params.getAll('status'), params.get('page')]).toEqual(['2025-03-31', ['completed'], '1']);
+      expect(TestBed.inject(Router).url).not.toContain('region');
+      expect(document.activeElement?.textContent?.trim()).toBe('Filtered by');
+    });
+
+    it('removing the status and date chips widens the grid step by step', async () => {
+      await open(DRILL);
+      await respond(page([row(1)], 1));
+
+      root().querySelector<HTMLButtonElement>('button[aria-label="Remove filter Status: Completed"]')!.click();
+      await settle(fixture);
+      let request = ordersRequest();
+      expect(request.request.params.has('status')).toBe(false);
+      request.flush(page([row(1)], 1));
+      await settle(fixture);
+
+      root().querySelector<HTMLButtonElement>('button[aria-label^="Remove filter Date:"]')!.click();
+      await settle(fixture);
+      request = ordersRequest();
+      expect([request.request.params.has('from'), request.request.params.has('to')]).toEqual([false, false]);
+      request.flush(page([row(1)], 1));
+      await settle(fixture);
+      expect(chipTexts()).toEqual(['Region: Europe']);
+    });
+
+    it('a drill-down with no completed lines explains it and offers the other statuses', async () => {
+      await open(DRILL);
+      await respond(page([], 0));
+
+      expect(root().querySelector('.state')?.textContent).toContain('Only completed lines are shown.');
+      button('Show all statuses').click();
+      await settle(fixture);
+
+      const request = ordersRequest();
+      expect(request.request.params.has('status')).toBe(false);
+      expect(request.request.params.getAll('region')).toEqual(['Europe']);
+      request.flush(page([row(1, { status: 'refunded' })], 1));
+    });
+  });
+
+  it('without filters, says the grid shows every order line', async () => {
+    await open('/orders');
+    await respond(page([row(1)], 1));
+
+    expect(root().querySelector('app-filter-chips')?.textContent?.trim()).toBe('No filters: showing every order line');
+    expect(root().querySelector('a.back')?.getAttribute('href')).toBe('/dashboard');
+  });
+
   it('keeps the filters chosen on the dashboard when opened from the menu', async () => {
     await open('/dashboard');
     TestBed.inject(FilterStore).update({ preset: 'ytd', regions: ['Latin America'] });
