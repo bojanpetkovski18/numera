@@ -9,9 +9,9 @@ const SHARED_KEYS = ['preset', 'from', 'to', 'region', 'channel', 'category'] as
 /**
  * Keeps the shared filter store and the current page's URL in step. Call from a routed component's constructor.
  *
- * - First visit: if the URL carries filter parameters (a shared link, a reload) they win; otherwise the filters
- *   already chosen on another screen are kept and written into this page's URL. So moving between the dashboard
- *   and the orders grid by the menu keeps the filters.
+ * - First visit: if the URL carries filter parameters (a shared link, a reload, a drill-down) or the visit is a
+ *   back/forward navigation, the URL wins; otherwise the filters already chosen on another screen are kept and
+ *   written into this page's URL. So moving between the dashboard and the orders grid by the menu keeps the filters.
  * - Afterwards: back/forward and edited URLs update the store; store changes update the URL (replaceUrl).
  *
  * This is the only place that writes the page's query string. Pages with their own URL state (the grid's sort and
@@ -29,11 +29,14 @@ export function syncFiltersWithUrl(
   const router = inject(Router);
   const filters = inject(FilterStore);
   const destroyRef = inject(DestroyRef);
+  // Back/forward restores the page as it was, even a URL without filters: after a drill-down from the default
+  // dashboard, "back" must not show the dashboard with the drilled filters still applied.
+  const restoringHistory = router.currentNavigation()?.trigger === 'popstate';
   let first = true;
 
   route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
     const urlHasFilters = hasFilterParams(params, includeGranularity);
-    if (first && !urlHasFilters) {
+    if (first && !urlHasFilters && !restoringHistory) {
       first = false;
       return; // keep the store; the effect below writes it into the URL
     }
