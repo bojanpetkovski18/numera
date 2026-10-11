@@ -1,0 +1,5 @@
+﻿order_id,order_date,customer_id,region,channel,product_sku,product_category,quantity,unit_price,discount,status
+Q-0001,2025-06-01,C-1,"Europe, West",Online Store,SKU-A,"Single Origin, Roasted",1,14.00,0,completed
+Q-0002,2025-06-02,C-2,Europe,"Online ""Store""",SKU-B,"Blends
+House",2,18.50,0.05,completed
+Q-0003,2025-06-03,C-3,Europe,Mobile App,SKU-C,Equipment,1,89.00,0,completed

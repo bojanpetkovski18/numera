@@ -1,0 +1,3 @@
+Order_ID,ORDER_DATE,Customer_Id,notes,Region,Channel,Product_SKU,Product_Category,Quantity,Unit_Price,Discount,Status,loyalty_tier
+U-0001,2025-05-01,C-1,gift,Europe,Online Store,SKU-A,Blends,1,14.00,0,completed,gold
+U-0002,2025-05-02,C-2,,Europe,Mobile App,SKU-B,Single Origin,2,18.50,0.1,completed,silver

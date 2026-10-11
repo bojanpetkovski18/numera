@@ -1,0 +1,2 @@
+order_id,order_date,customer_id,region,channel,product_sku,product_category,quantity,discount,status
+X-1,2025-01-01,C-1,Europe,Online Store,SKU-A,Blends,1,0,completed
