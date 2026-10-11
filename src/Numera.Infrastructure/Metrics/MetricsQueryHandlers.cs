@@ -140,6 +140,46 @@ public sealed class GetRevenueTimeseriesHandler(NumeraDbContext db)
     }
 }
 
+public sealed class GetFilterOptionsHandler(NumeraDbContext db)
+{
+    public Task<FilterOptions> HandleAsync(CancellationToken ct = default) =>
+        MetricsSql.WithConnectionAsync(db, async connection =>
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT 'region' AS kind, region AS value FROM orders GROUP BY region
+                UNION ALL
+                SELECT 'channel', channel FROM orders GROUP BY channel
+                UNION ALL
+                SELECT 'category', product_category FROM orders GROUP BY product_category;
+                SELECT MIN(order_date), MAX(order_date) FROM orders;
+                """;
+
+            var regions = new List<string>();
+            var channels = new List<string>();
+            var categories = new List<string>();
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var target = reader.GetString(0) switch
+                {
+                    "region" => regions,
+                    "channel" => channels,
+                    _ => categories,
+                };
+                target.Add(reader.GetString(1));
+            }
+
+            await reader.NextResultAsync(ct);
+            await reader.ReadAsync(ct);
+            DateOnly? first = reader.IsDBNull(0) ? null : reader.GetFieldValue<DateOnly>(0);
+            DateOnly? last = reader.IsDBNull(1) ? null : reader.GetFieldValue<DateOnly>(1);
+
+            static List<string> Sorted(List<string> values) => values.Order(StringComparer.OrdinalIgnoreCase).ToList();
+            return new FilterOptions(Sorted(regions), Sorted(channels), Sorted(categories), first, last);
+        }, ct);
+}
+
 public sealed class GetRevenueBreakdownHandler(NumeraDbContext db)
 {
     public Task<RevenueBreakdown> HandleAsync(OrderFilter filter, BreakdownDimension by, CancellationToken ct = default) =>

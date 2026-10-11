@@ -395,10 +395,38 @@ public class MetricsEndpointsTests(PostgresFixture postgres) : IClassFixture<Pos
         Assert.True(problem.GetProperty("errors").TryGetProperty(field, out _));
     }
 
+    private sealed record Options(string[] Regions, string[] Channels, string[] Categories, DateOnly? FirstOrderDate, DateOnly? LastOrderDate);
+
+    [Fact]
+    public async Task Filter_options_list_distinct_values_and_the_date_range()
+    {
+        await using var api = await StartAsync();
+
+        var options = await GetAsync<Options>(api, "/api/filter-options");
+
+        Assert.Equal(["Asia-Pacific", "Europe", "North America"], options.Regions);
+        Assert.Equal(["Marketplace", "Mobile App", "Online Store"], options.Channels);
+        Assert.Equal(["Blends", "Equipment", "Single Origin"], options.Categories);
+        Assert.Equal(new DateOnly(2025, 1, 5), options.FirstOrderDate);
+        Assert.Equal(new DateOnly(2025, 3, 31), options.LastOrderDate);
+    }
+
+    [Fact]
+    public async Task Filter_options_on_an_empty_database_are_empty()
+    {
+        await using var api = await StartAsync([]);
+
+        var options = await GetAsync<Options>(api, "/api/filter-options");
+
+        Assert.Empty(options.Regions);
+        Assert.Null(options.FirstOrderDate);
+    }
+
     [Theory]
     [InlineData("/api/metrics/summary")]
     [InlineData("/api/metrics/timeseries")]
     [InlineData("/api/metrics/breakdown?by=region")]
+    [InlineData("/api/filter-options")]
     public async Task Metrics_require_authentication(string url)
     {
         await using var api = await StartAsync(signedIn: false);
