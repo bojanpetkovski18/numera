@@ -48,6 +48,7 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 - Import a CSV (needs a token from `POST /api/auth/login`): `curl -H "Authorization: Bearer <token>" -F "file=@orders.csv;type=text/csv" http://localhost:5080/api/imports`; limits are 10 MB and 100,000 rows; dates must be `yyyy-MM-dd`
 - Import history and error report: `GET /api/imports` (recent jobs) and `GET /api/imports/{id}/errors.csv`; a sample CSV is served from the web app at `/sample-orders.csv`
 - Metrics (filters `from`, `to`, `region`, `channel`, `category`; repeat a key for any-of): `GET /api/metrics/summary`, `/timeseries?granularity=day|week|month`, `/breakdown?by=category|region|channel`. Definitions are in `docs/ARCHITECTURE.md`
+- Filter choices for the UI: `GET /api/filter-options` (distinct regions, channels, categories and the data's date range)
 - Demo login: `demo@numera.example` / `Demo-Pass-2026!` (documented demo values; created by `migrate` and `seed`)
 - Seed DB (reset, then ~200,000 rows): `dotnet run --project src/Numera.Api -- seed`
 - Add a migration: `dotnet tool restore` once, then `dotnet ef migrations add <Name> -p src/Numera.Infrastructure -s src/Numera.Api -o Persistence/Migrations` (dotnet-ef is pinned in `dotnet-tools.json`)
