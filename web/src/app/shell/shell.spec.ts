@@ -1,11 +1,16 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../app.routes';
+import { SESSION_STORAGE_KEY } from '../core/auth/auth.service';
 import { Shell } from './shell';
 
 describe('Shell', () => {
   beforeEach(() => {
+    sessionStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({ accessToken: 't', expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    );
     TestBed.configureTestingModule({ imports: [Shell], providers: [provideRouter(routes)] });
   });
 

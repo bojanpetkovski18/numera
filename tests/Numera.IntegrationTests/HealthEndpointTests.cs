@@ -1,29 +1,26 @@
-﻿using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
+using System.Net;
 
 namespace Numera.IntegrationTests;
 
-public class HealthEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointTests
 {
     [Fact]
     public async Task Health_returns_200_without_authentication()
     {
-        var client = factory.CreateClient();
+        await using var factory = new TestApiFactory();
 
-        var response = await client.GetAsync("/health");
+        var response = await factory.CreateClient().GetAsync("/health");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
-    public async Task Unknown_route_returns_problem_details()
+    public async Task Unknown_route_returns_401_for_anonymous_callers()
     {
-        var client = factory.CreateClient();
+        await using var factory = new TestApiFactory();
 
-        var response = await client.GetAsync("/does-not-exist");
+        var response = await factory.CreateClient().GetAsync("/does-not-exist");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Numera.Application.Entities;
+using Numera.Application.Entities;
 using Numera.Infrastructure.Seeding;
 
 namespace Numera.UnitTests;

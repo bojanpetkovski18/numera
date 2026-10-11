@@ -1,17 +1,15 @@
-﻿import { Routes } from '@angular/router';
+import { Routes } from '@angular/router';
+import { authGuard } from './core/auth/auth.guard';
+import { LoginPage } from './pages/login/login-page';
 import { PlaceholderPage } from './pages/placeholder-page';
 import { Shell } from './shell/shell';
 
 export const routes: Routes = [
-  {
-    path: 'login',
-    component: PlaceholderPage,
-    title: 'Sign in · Numera',
-    data: { heading: 'Sign in', description: 'Demo credentials will be shown here (milestone M03).' },
-  },
+  { path: 'login', component: LoginPage, title: 'Sign in · Numera' },
   {
     path: '',
     component: Shell,
+    canActivate: [authGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
@@ -42,3 +40,4 @@ export const routes: Routes = [
   },
   { path: '**', redirectTo: '' },
 ];
+

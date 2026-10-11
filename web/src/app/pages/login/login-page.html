@@ -1,0 +1,50 @@
+<main class="login">
+  <section class="card" aria-labelledby="login-heading">
+    <p class="brand">Numera</p>
+    <h1 id="login-heading">Sign in</h1>
+    <p class="lede">Reporting for Harbor &amp; Pine Coffee (fictional demo data).</p>
+
+    <div class="demo" aria-label="Demo credentials">
+      <p class="demo-title">Demo credentials</p>
+      <dl>
+        <dt>Email</dt>
+        <dd>{{ demoEmail }}</dd>
+        <dt>Password</dt>
+        <dd>{{ demoPassword }}</dd>
+      </dl>
+      <button type="button" class="secondary" (click)="useDemoCredentials()">Fill in demo credentials</button>
+    </div>
+
+    <form (ngSubmit)="submit()" novalidate>
+      <label for="email">Email</label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        autocomplete="username"
+        [ngModel]="email()"
+        (ngModelChange)="email.set($event)"
+        [disabled]="submitting()"
+      />
+
+      <label for="password">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+        [disabled]="submitting()"
+      />
+
+      @if (errorMessage(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+
+      <button type="submit" class="primary" [disabled]="submitting()">
+        {{ submitting() ? 'Signing in…' : 'Sign in' }}
+      </button>
+    </form>
+  </section>
+</main>

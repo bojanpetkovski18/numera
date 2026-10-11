@@ -1,5 +1,6 @@
-﻿import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService } from '../core/auth/auth.service';
 
 interface NavItem {
   readonly label: string;
@@ -13,6 +14,7 @@ interface NavItem {
   styleUrl: './shell.css',
 })
 export class Shell {
+  private readonly auth = inject(AuthService);
   protected readonly navOpen = signal(false);
 
   protected readonly navItems: readonly NavItem[] = [
@@ -26,7 +28,12 @@ export class Shell {
     this.navOpen.update((open) => !open);
   }
 
+  protected logout(): void {
+    this.auth.logout();
+  }
+
   protected closeNav(): void {
     this.navOpen.set(false);
   }
 }
+

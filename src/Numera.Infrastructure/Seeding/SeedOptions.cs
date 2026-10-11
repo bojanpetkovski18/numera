@@ -1,4 +1,4 @@
-﻿namespace Numera.Infrastructure.Seeding;
+namespace Numera.Infrastructure.Seeding;
 
 public sealed record SeedOptions
 {
