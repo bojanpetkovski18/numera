@@ -87,6 +87,21 @@ describe('DashboardPage', () => {
     expect(url).toContain('channel=Mobile%20App');
   });
 
+  it('selects restore values from the URL even though the options load afterwards', async () => {
+    await open('/dashboard?region=Europe&channel=Mobile%20App&preset=last90');
+
+    // filter-options is still pending here; flush it last
+    for (const r of pending(http, '/api/metrics/summary')) r.flush(SUMMARY);
+    await settleAll();
+    for (const r of pending(http, '/api/filter-options')) r.flush(OPTIONS);
+    await settleAll();
+
+    expect(root().querySelector<HTMLSelectElement>('#f-regions')!.value).toBe('Europe');
+    expect(root().querySelector<HTMLSelectElement>('#f-channels')!.value).toBe('Mobile App');
+    expect(root().querySelector<HTMLSelectElement>('#f-categories')!.value).toBe('');
+    expect(root().querySelector<HTMLSelectElement>('#f-preset')!.value).toBe('last90');
+  });
+
   it('changing a filter in the filter bar refetches every widget with the new value', async () => {
     await open('/dashboard');
     flushAll();

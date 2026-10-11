@@ -13,9 +13,9 @@ type ListField = 'regions' | 'channels' | 'categories';
     <form class="card bar" aria-label="Dashboard filters" (submit)="$event.preventDefault()">
       <div class="field">
         <label for="f-preset">Date range</label>
-        <select id="f-preset" [value]="filters.preset()" (change)="setPreset($event)">
+        <select id="f-preset" (change)="setPreset($event)">
           @for (p of presets; track p.value) {
-            <option [value]="p.value">{{ p.label }}</option>
+            <option [value]="p.value" [selected]="p.value === filters.preset()">{{ p.label }}</option>
           }
         </select>
       </div>
@@ -34,10 +34,12 @@ type ListField = 'regions' | 'channels' | 'categories';
       @for (f of listFields; track f.field) {
         <div class="field">
           <label [for]="'f-' + f.field">{{ f.label }}</label>
-          <select [id]="'f-' + f.field" [value]="selected(f.field)" (change)="setList(f.field, $event)" [disabled]="options.isLoading()">
-            <option value="">{{ f.all }}</option>
+          <!-- [selected] per option, not [value] on the select: the options arrive after the filter (from the URL),
+               and a select cannot take a value before the matching option exists. -->
+          <select [id]="'f-' + f.field" (change)="setList(f.field, $event)" [disabled]="options.isLoading()">
+            <option value="" [selected]="selected(f.field) === ''">{{ f.all }}</option>
             @for (value of values(f.field); track value) {
-              <option [value]="value">{{ value }}</option>
+              <option [value]="value" [selected]="value === selected(f.field)">{{ value }}</option>
             }
           </select>
         </div>

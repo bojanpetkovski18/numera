@@ -49,6 +49,12 @@ import { RevenueBreakdown } from './metrics.models';
     </section>
   `,
   styles: `
+    :host {
+      display: block;
+    }
+    section {
+      height: 100%;
+    }
     .widget-subtitle {
       margin-bottom: var(--space-4);
     }

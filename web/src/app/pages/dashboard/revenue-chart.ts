@@ -15,8 +15,8 @@ import { RevenueTimeseries } from './metrics.models';
       <header class="head">
         <div>
           <h2 id="revenue-title" class="widget-title">Revenue over time</h2>
-          @if (total(); as t) {
-            <p class="widget-subtitle">{{ t }}</p>
+          @if (subtitle(); as s) {
+            <p class="widget-subtitle">{{ s }}</p>
           }
         </div>
         <div class="toggle" role="group" aria-label="Group revenue by">
@@ -130,12 +130,17 @@ export class RevenueChart {
     describeSeries(this.series.value()?.points ?? [], this.series.value()?.granularity ?? 'month'),
   );
 
-  protected readonly total = computed(() => {
+  /**
+   * Period count and the best period. Deliberately not a total: summing per-period values that were each rounded
+   * to the cent drifts from the Revenue KPI by a few cents, which reads as an error.
+   */
+  protected readonly subtitle = computed(() => {
     if (!this.series.hasValue() || this.empty()) {
       return null;
     }
-    const points = this.series.value().points;
-    return `${formatCurrency(points.reduce((sum, p) => sum + p.revenue, 0))} across ${formatInteger(points.length)} periods`;
+    const { points, granularity } = this.series.value();
+    const peak = points.reduce((best, p) => (p.revenue > best.revenue ? p : best), points[0]);
+    return `${formatInteger(points.length)} ${granularity}s · highest ${formatPeriod(peak.periodStart, granularity)}, ${formatCurrency(peak.revenue)}`;
   });
 
   protected period(value: string): string {

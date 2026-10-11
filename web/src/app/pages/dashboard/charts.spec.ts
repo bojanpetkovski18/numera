@@ -38,7 +38,7 @@ describe('RevenueChart', () => {
       ['Jan 2025', '$95.00', '2'],
       ['Feb 2025', '$30.00', '1'],
     ]);
-    expect(el().textContent).toContain('$125.00 across 2 periods');
+    expect(el().querySelector('.widget-subtitle')?.textContent).toBe('2 months · highest Jan 2025, $95.00');
   });
 
   it('shows an empty state when every period is zero', async () => {
