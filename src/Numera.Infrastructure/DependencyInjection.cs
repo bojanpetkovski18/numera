@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<GetRevenueBreakdownHandler>();
         services.AddScoped<GetFilterOptionsHandler>();
         services.AddScoped<GetOrdersHandler>();
+        services.AddScoped<ExportOrdersHandler>();
         return services;
     }
 }

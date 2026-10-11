@@ -52,7 +52,9 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy
         .WithOrigins(allowedOrigins)
         .AllowAnyHeader()
-        .AllowAnyMethod()));
+        .AllowAnyMethod()
+        // Read by the web app when it saves an export (file name and row count).
+        .WithExposedHeaders("Content-Disposition", Numera.Api.Orders.OrderEndpoints.RowCountHeader)));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
