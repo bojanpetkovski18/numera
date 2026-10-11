@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Numera.Api.Auth;
 using Numera.Api.Imports;
+using Numera.Api.Metrics;
 using Numera.Application;
 using Numera.Application.Imports;
 using Numera.Infrastructure;
@@ -150,6 +151,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
     .AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapImportEndpoints();
+app.MapMetricsEndpoints();
 
 app.Run();
 

@@ -9,6 +9,7 @@ Built by Bojan Petkovski as a solo project with AI assistance (Claude).
 ## Project documents
 
 - [Specification](docs/SPEC.md)
+- [Architecture notes and KPI definitions](docs/ARCHITECTURE.md)
 - [AI coding rules](CLAUDE.md)
 - [Milestone prompts](prompts/)
 - [Progress](PROGRESS.md)
