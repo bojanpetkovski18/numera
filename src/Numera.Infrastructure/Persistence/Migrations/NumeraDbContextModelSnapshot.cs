@@ -20,6 +20,7 @@ namespace Numera.Infrastructure.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Numera.Application.Entities.ImportError", b =>
@@ -198,6 +199,12 @@ namespace Numera.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderDate")
                         .HasDatabaseName("ix_orders_order_date");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_orders_order_id_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("OrderId"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("OrderId"), new[] { "gin_trgm_ops" });
 
                     b.HasIndex("ProductCategory")
                         .HasDatabaseName("ix_orders_product_category");

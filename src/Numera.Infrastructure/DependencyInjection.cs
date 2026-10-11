@@ -9,6 +9,7 @@ using Numera.Application.Entities;
 using Numera.Infrastructure.Auth;
 using Numera.Infrastructure.Imports;
 using Numera.Infrastructure.Metrics;
+using Numera.Infrastructure.Orders;
 using Numera.Infrastructure.Persistence;
 using Numera.Infrastructure.Seeding;
 
@@ -40,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<GetRevenueTimeseriesHandler>();
         services.AddScoped<GetRevenueBreakdownHandler>();
         services.AddScoped<GetFilterOptionsHandler>();
+        services.AddScoped<GetOrdersHandler>();
         return services;
     }
 }
