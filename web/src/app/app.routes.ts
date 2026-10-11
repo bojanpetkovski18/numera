@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { ImportPage } from './pages/import/import-page';
 import { LoginPage } from './pages/login/login-page';
 import { PlaceholderPage } from './pages/placeholder-page';
 import { Shell } from './shell/shell';
@@ -24,12 +25,7 @@ export const routes: Routes = [
         title: 'Orders · Numera',
         data: { heading: 'Orders', description: 'The filterable orders grid arrives in milestone M08.' },
       },
-      {
-        path: 'import',
-        component: PlaceholderPage,
-        title: 'Import · Numera',
-        data: { heading: 'Import', description: 'CSV upload and validation arrive in milestones M04 and M05.' },
-      },
+      { path: 'import', component: ImportPage, title: 'Import · Numera' },
       {
         path: 'settings',
         component: PlaceholderPage,

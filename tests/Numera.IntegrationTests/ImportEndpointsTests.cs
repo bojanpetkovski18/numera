@@ -387,4 +387,141 @@ public class ImportEndpointsTests(PostgresFixture postgres) : IClassFixture<Post
         await using var db = Db(api);
         Assert.Equal("=HYPERLINK(\"http://example.test\")", (await db.Context.Orders.SingleAsync()).Region);
     }
+
+    // error report and history -------------------------------------------------------------------
+
+    private static async Task<List<string[]>> ReadCsvAsync(HttpResponseMessage response)
+    {
+        var text = await response.Content.ReadAsStringAsync();
+        using var reader = new StringReader(text.TrimStart('\uFEFF'));
+        using var csv = new CsvHelper.CsvParser(reader, new CsvHelper.Configuration.CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture) { HasHeaderRecord = false });
+        var rows = new List<string[]>();
+        while (csv.Read())
+        {
+            rows.Add(csv.Record!);
+        }
+
+        return rows;
+    }
+
+    [Fact]
+    public async Task The_error_report_matches_the_rejected_rows_exactly()
+    {
+        await using var api = await StartAsync();
+        var summary = await ReadSummaryAsync(await UploadAsync(api.Client, Fixture("mixed-rows.csv")));
+
+        var response = await api.Client.GetAsync($"/api/imports/{summary.Id}/errors.csv");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/csv", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains($"import-{summary.Id}-errors.csv", response.Content.Headers.ContentDisposition?.ToString());
+
+        var rows = await ReadCsvAsync(response);
+        Assert.Equal(["row_number", "field", "message", "raw_row"], rows[0]);
+
+        await using var db = Db(api);
+        var expected = await db.Context.ImportErrors
+            .Where(e => e.ImportJobId == summary.Id)
+            .OrderBy(e => e.RowNumber).ThenBy(e => e.Id)
+            .ToListAsync();
+        Assert.Equal(7, expected.Count);
+        Assert.Equal(expected.Count, rows.Count - 1);
+        for (var i = 0; i < expected.Count; i++)
+        {
+            Assert.Equal(expected[i].RowNumber.ToString(), rows[i + 1][0]);
+            Assert.Equal(expected[i].Field ?? string.Empty, rows[i + 1][1]);
+            Assert.Equal(expected[i].Message, rows[i + 1][2]);
+            Assert.Equal(expected[i].RawRow, rows[i + 1][3]);
+        }
+
+        // Spot-check the visible content: row 4 has quantity 0.
+        Assert.Equal(
+            ["4", "quantity", "quantity must be greater than 0.", "M-0003,2025-04-03,C-003,Europe,Online Store,SKU-A,Blends,0,14.00,0,completed"],
+            rows[1]);
+    }
+
+    [Fact]
+    public async Task Values_starting_with_formula_characters_are_neutralized_in_the_error_report()
+    {
+        await using var api = await StartAsync();
+        var csv = "order_id,order_date,customer_id,region,channel,product_sku,product_category,quantity,unit_price,discount,status\n" +
+                  "=2+2,2025-01-01,C-1,EU,web,S,C,0,1,0,completed\n" +   // raw row starts with '='
+                  "+1,2025-01-01,C-1,EU,web,S,C,0,1,0,completed\n" +
+                  "-1,2025-01-01,C-1,EU,web,S,C,0,1,0,completed\n" +
+                  "@SUM(A1),2025-01-01,C-1,EU,web,S,C,0,1,0,completed\n";
+        var summary = await ReadSummaryAsync(await UploadAsync(api.Client, Encoding.UTF8.GetBytes(csv)));
+        Assert.Equal(4, summary.RejectedRows);
+
+        var rows = await ReadCsvAsync(await api.Client.GetAsync($"/api/imports/{summary.Id}/errors.csv"));
+
+        Assert.Equal(5, rows.Count);
+        Assert.All(rows.Skip(1), r => Assert.StartsWith("'", r[3]));
+        Assert.StartsWith("'=2+2,", rows[1][3]);
+        Assert.StartsWith("'+1,", rows[2][3]);
+        Assert.StartsWith("'-1,", rows[3][3]);
+        Assert.StartsWith("'@SUM(A1),", rows[4][3]);
+        // The stored data is untouched; only the export is neutralized.
+        await using var db = Db(api);
+        Assert.StartsWith("=2+2,", (await db.Context.ImportErrors.OrderBy(e => e.RowNumber).FirstAsync()).RawRow);
+    }
+
+    [Fact]
+    public async Task The_error_report_for_an_import_without_rejects_has_only_the_header()
+    {
+        await using var api = await StartAsync();
+        var summary = await ReadSummaryAsync(await UploadAsync(api.Client, Fixture("valid-orders.csv")));
+
+        var rows = await ReadCsvAsync(await api.Client.GetAsync($"/api/imports/{summary.Id}/errors.csv"));
+
+        Assert.Single(rows);
+    }
+
+    [Fact]
+    public async Task The_error_report_for_an_unknown_import_returns_404_problem_details()
+    {
+        await using var api = await StartAsync();
+
+        var response = await api.Client.GetAsync($"/api/imports/{Guid.NewGuid()}/errors.csv");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task The_error_report_requires_authentication()
+    {
+        await using var api = await StartAsync(signedIn: false);
+
+        var response = await api.Client.GetAsync($"/api/imports/{Guid.NewGuid()}/errors.csv");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task History_lists_recent_imports_newest_first_and_honours_the_limit()
+    {
+        await using var api = await StartAsync();
+        var first = await ReadSummaryAsync(await UploadAsync(api.Client, Fixture("valid-orders.csv"), "first.csv"));
+        var second = await ReadSummaryAsync(await UploadAsync(api.Client, Fixture("mixed-rows.csv"), "second.csv"));
+
+        var all = await api.Client.GetFromJsonAsync<List<Summary>>("/api/imports", new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var limited = await api.Client.GetFromJsonAsync<List<Summary>>("/api/imports?limit=1", new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal([second.Id, first.Id], all!.Select(j => j.Id));
+        Assert.Equal(6, all![0].RejectedRows);
+        Assert.Equal([second.Id], limited!.Select(j => j.Id));
+    }
+
+    [Fact]
+    public async Task History_is_empty_before_any_import_and_requires_authentication()
+    {
+        await using var api = await StartAsync();
+        await using var anonymous = await StartAsync(signedIn: false);
+
+        var list = await api.Client.GetFromJsonAsync<List<Summary>>("/api/imports", new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var denied = await anonymous.Client.GetAsync("/api/imports");
+
+        Assert.Empty(list!);
+        Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+    }
 }

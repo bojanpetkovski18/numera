@@ -10,7 +10,7 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 | M02 | Database schema and seed generator | 2 | complete locally | 2026-10-11 | Migration, 200,000-row seed, unit and Testcontainers tests verified locally. CI run pending. |
 | M03 | Authentication (JWT, demo user) | 1 | complete locally | 2026-10-11 | Backend and web tests plus a headless-Edge run of the login flow verified locally. CI run pending. |
 | M04 | CSV import: upload and validation | 3 | complete locally | 2026-10-11 | Validation, import pipeline, endpoints, unit and Testcontainers tests verified; 100,000-row run measured. CI run pending. |
-| M05 | CSV import: error report and import UI | 2 | not started | | |
+| M05 | CSV import: error report and import UI | 2 | complete locally | 2026-10-11 | Error report, history endpoint, Import screen, unit/integration/component tests and a headless-Edge run verified. CI run pending. |
 | M06 | Metrics endpoints (summary, timeseries, breakdown) | 2 | not started | | |
 | M07 | Dashboard UI (KPIs, charts, date filter) | 3 | not started | | |
 | M08 | Orders grid (API and UI) | 3 | not started | | |
@@ -23,8 +23,8 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Measured results (fill in only when measured)
 
-- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (90 unit tests, 46 integration tests against PostgreSQL 17 via Testcontainers)
-- Web build / test status: `npm run build` succeeded; `npm test -- --watch=false` passed on 2026-10-11 (13 tests in 4 files)
+- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (108 unit tests, 53 integration tests against PostgreSQL 17 via Testcontainers)
+- Web build / test status: `npm run build` succeeded; `npm test -- --watch=false` passed on 2026-10-11 (28 tests in 6 files)
 - Query time for dashboard on seeded data: _not measured_
 - Seed time, 200,000 rows (local Docker PostgreSQL 17, dev machine, single runs on 2026-10-11): generation 522 ms, binary COPY insert 3,274 ms in the service; about 5.6 s wall-clock for `dotnet run -- seed` including process start and migrate check
 - Import of a 100,000-row, 9.08 MB file via `POST /api/imports` (local dev machine, Docker PostgreSQL 17 with 200,000 existing orders, single runs on 2026-10-11): 6.4 s wall-clock for 100,000 rows imported (job duration 6.26 s); 4.6 s for the same file again with all 100,000 rows rejected as existing and 100,000 error rows written. API process working set went from 103 MB after startup to a peak of 180 MB (first upload) and 197 MB (second). Measured with `curl.exe` and the process peak working set, so rough.
@@ -38,4 +38,4 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 
 ## Next step
 
-Confirm CI is green on `#0003-import-upload-and-validation`, merge to `dev`, then start M05 (import error report and import UI) on a new `#0004-` branch.
+Confirm CI is green on `#0004-import-error-report-and-ui`, merge to `dev`, then start M06 (metrics endpoints) on a new `#0005-` branch.

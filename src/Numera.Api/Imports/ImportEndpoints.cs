@@ -23,7 +23,9 @@ public static class ImportEndpoints
 
         // Antiforgery is for cookie-authenticated browsers; this API authenticates with a bearer token.
         group.MapPost("/", UploadAsync).DisableAntiforgery();
+        group.MapGet("/", ListAsync);
         group.MapGet("/{id:guid}", GetAsync);
+        group.MapGet("/{id:guid}/errors.csv", ErrorReportAsync);
 
         return app;
     }
@@ -108,6 +110,27 @@ public static class ImportEndpoints
         return job is null
             ? Problem(StatusCodes.Status404NotFound, "Import not found", "No import exists with that id.")
             : Results.Ok(job);
+    }
+
+    private static async Task<IResult> ListAsync(ListImportJobsHandler handler, CancellationToken ct, int limit = ListImportJobsHandler.DefaultLimit) =>
+        Results.Ok(await handler.HandleAsync(limit, ct));
+
+    private static async Task<IResult> ErrorReportAsync(Guid id, GetImportErrorsHandler handler, CancellationToken ct)
+    {
+        if (!await handler.JobExistsAsync(id, ct))
+        {
+            return Problem(StatusCodes.Status404NotFound, "Import not found", "No import exists with that id.");
+        }
+
+        // Streamed straight from the database; a UTF-8 BOM lets Excel read non-ASCII text correctly.
+        return Results.Stream(
+            async stream =>
+            {
+                await using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(true), leaveOpen: true);
+                await ImportErrorReport.WriteAsync(handler.StreamAsync(id), writer, ct);
+            },
+            contentType: "text/csv; charset=utf-8",
+            fileDownloadName: $"import-{id}-errors.csv");
     }
 
     private static IResult TooLarge() => Problem(
