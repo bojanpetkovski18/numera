@@ -1,4 +1,4 @@
-﻿namespace Numera.UnitTests;
+namespace Numera.UnitTests;
 
 public class SmokeTests
 {

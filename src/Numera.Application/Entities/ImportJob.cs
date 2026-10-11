@@ -1,4 +1,4 @@
-﻿namespace Numera.Application.Entities;
+namespace Numera.Application.Entities;
 
 public enum ImportJobStatus
 {

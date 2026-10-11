@@ -1,4 +1,4 @@
-﻿# Numera Decisions Log
+# Numera Decisions Log
 
 One entry per meaningful decision. Format: context, decision, alternatives, trade-offs. The agent adds entries as it works; review them yourself, because you should be able to explain every one in an interview.
 

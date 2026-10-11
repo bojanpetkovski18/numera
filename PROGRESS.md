@@ -1,4 +1,4 @@
-﻿# Numera Progress
+# Numera Progress
 
 Update this file at the end of every milestone. Only record results that were actually verified.
 

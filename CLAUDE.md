@@ -1,4 +1,4 @@
-﻿# Numera: Rules for AI Coding Agents
+# Numera: Rules for AI Coding Agents
 
 Read this file and `docs/SPEC.md` at the start of every session. They are the source of truth. If a request conflicts with them, stop and ask.
 

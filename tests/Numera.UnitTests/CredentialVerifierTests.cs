@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Numera.Application.Auth;
 using Numera.Application.Entities;
 
