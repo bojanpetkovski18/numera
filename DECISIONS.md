@@ -353,4 +353,47 @@ Measured with `EXPLAIN (ANALYZE)` on the local Docker PostgreSQL 17 after `ANALY
 - The file name comes from `Content-Disposition` (path separators removed) and the row count from `X-Row-Count`. The CORS policy is set to expose both headers for a separately hosted front end; this is not exercised yet, because locally the app is served from the same origin through the dev proxy (check in M12).
 - **States:** "Exporting…" with a spinner and `aria-busy` while the request runs; a status message with the row count and file name when done; an alert with the server's problem detail on failure. Messages hide once the filters change, so they never describe another view.
 
-_Add new decisions below as D047, D048, ..._
+## D047: Demo reset
+
+- `POST /api/demo/reset` reuses the `seed` command's `DemoSeeder`: one transaction that clears the order data and bulk-loads the same deterministic 200,000 rows. Order ids restart at 1, so a reset gives back exactly the seeded state. An integration test compares the dashboard summary and an md5 fingerprint of every row before and after an import plus reset.
+- **Concurrency:** imports and the reset share one transaction-scoped advisory lock (`DataLocks.OrderWrites`, previously the import's own lock, D028).
+  - The reset uses `pg_try_advisory_xact_lock` and answers 409 "Demo data is busy" at once, rather than queueing behind a long import.
+  - Imports keep waiting for the lock, so an import that arrives during a reset runs right after it, against the fresh data.
+  - The `seed` command waits too.
+- **Import history:** a running import registers its job row before it takes the lock (it scans the file first). The reset therefore deletes only finished import jobs. Truncating every job would make that import fail when it inserts its orders.
+- **Rate limit:** 3 resets per client IP per 10 minutes, configurable through `RateLimiting:ResetPermitLimit` and `RateLimiting:ResetWindowSeconds`. A reset is several seconds of database work, and the demo is public. The 429 problem names the policy ("Too many demo resets") and gives a `Retry-After`.
+- Like imports, it runs on the application-stopping token, so a closed browser tab does not roll back a reset half-way.
+- Any signed-in user may reset: everyone shares the one demo account, and the confirmation dialog says the change affects everyone.
+
+## D048: Settings and confirmation dialog
+
+- The confirmation uses the native `<dialog>` with `showModal()`, which provides focus containment, Escape to close and an inert background without a library.
+  - Focus starts on Cancel, the safe choice for a destructive action, and returns to the "Reset demo data" button on close.
+  - Only an explicit "Reset data" choice resets; Escape and Cancel do not.
+- While the reset runs, the button is `aria-disabled` rather than `disabled`, so keyboard focus is not dropped. A status message reports progress and then the result; a failure is an alert with the server's reason (busy, rate limited, offline).
+- After a reset, the Import screen's last upload result is cleared, because it no longer describes the data.
+
+## D049: App-wide error handling and the not-found page
+
+- Unexpected errors reach a custom `ErrorHandler`: logged to the console for developers (the app's only intentional console call) and shown as a dismissible banner with "Reload page". Failed lazy page loads (connection lost, new version deployed) also go there, through the router's navigation error handler, with a message that explains it.
+- Expected failures stay with each screen's own error states (D035, M05, M08, M10); the banner is the last resort.
+- Unknown addresses show a "Page not found" page with a link to the dashboard, instead of silently redirecting. It sits outside the signed-in shell, so it also works before signing in.
+
+## D050: Accessibility and responsive pass
+
+- **Checked:** axe-core 4.10 (WCAG 2.0, 2.1 and 2.2 A/AA plus best practices) on login, dashboard, orders (data and empty), import, settings (with the dialog open) and the not-found page, signed in and out, at 375, 768 and 1280 px. A headless-Edge walk-through checked keyboard flow and scrolling at the same widths.
+- **Fixed:**
+  - duplicate landmark name on the orders table;
+  - "Sign out" not at the right edge at tablet width;
+  - disabled `.btn` buttons that looked enabled;
+  - small targets (data-table toggles, back link, import format toggle and sample link) raised to at least 24 px tall;
+  - links now use the theme colour;
+  - "Retry" and "Try again" unified to "Try again".
+- **Added:**
+  - a "Skip to main content" link;
+  - focus moves to the main content when the page changes, including after signing in (screen readers announce the new page);
+  - Escape closes the phone menu and returns focus to the menu button.
+- **Left as is:** data-table links are 19 px tall, but their rows are 28 px apart, which meets WCAG 2.5.8's spacing exception. The import file input is visually hidden by design; its visible label is the target.
+- **Not checked by tools:** a screen-reader run with NVDA or VoiceOver.
+
+_Add new decisions below as D051, D052, ..._

@@ -52,6 +52,7 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 - Export the grid view as CSV: `GET /api/orders/export` (same parameters as `/api/orders` without paging; at most 100,000 rows, otherwise 422), for example `curl -o orders.csv -H "Authorization: Bearer <token>" "http://localhost:5080/api/orders/export?region=Europe&region=Asia-Pacific"`
 - Filter choices for the UI: `GET /api/filter-options` (distinct regions, channels, categories and the data's date range)
 - Demo login: `demo@numera.example` / `Demo-Pass-2026!` (documented demo values; created by `migrate` and `seed`)
+- Reset the demo data through the API (signed in; same result as `seed`; 409 while an import runs; 3 per 10 minutes per client): `curl -X POST -H "Authorization: Bearer <token>" http://localhost:5080/api/demo/reset`, or Settings > Reset demo data in the web app
 - Seed DB (reset, then ~200,000 rows): `dotnet run --project src/Numera.Api -- seed`
 - Add a migration: `dotnet tool restore` once, then `dotnet ef migrations add <Name> -p src/Numera.Infrastructure -s src/Numera.Api -o Persistence/Migrations` (dotnet-ef is pinned in `dotnet-tools.json`)
 - Start PostgreSQL: `docker compose up -d` (copy `.env.example` to `.env` first; verified: container reports healthy)
