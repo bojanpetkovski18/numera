@@ -18,13 +18,13 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 | M09 | Drill-down from charts to grid | 1 | complete locally | 2026-10-11 | Click, keyboard and data-table drill-downs from all three charts; filter chips and a back link on the grid; back/forward and scroll fixes; unit, component and Testcontainers consistency tests; a headless-Edge run of every drill path, numbers compared with the dashboard, at 1280 and 375 px with no console errors. CI run pending. |
 | M10 | CSV export of filtered view | 1 | complete locally | 2026-10-12 | Streamed export from one snapshot with a 100,000-row limit; Export CSV button with progress, result and error states; unit, Testcontainers (export = grid, cell by cell) and component tests; browser download compared with the grid; memory and time measured on the seed. CI run pending. |
 | M11 | Demo reset, states, responsive polish | 3 | complete locally | 2026-10-12 | Demo reset API and Settings flow; error banner and not-found page; states and wording audit; axe check (no violations after fixes) and keyboard/scroll walk-through at 375, 768 and 1280 px; reset restores the original dashboard numbers in the browser. CI run pending. |
-| M12 | E2E test, Docker, deploy, README, screenshots | 4 | not started | | |
+| M12 | E2E test, Docker, deploy, README, screenshots | 4 | partial | 2026-10-12 | Production image (API serves the Angular app), Docker Compose full stack, Playwright e2e locally against the image, fresh-clone test, secret scan, README, architecture, portfolio kit, Render blueprint. Pending: the live deployment on Render + Neon (needs the owner's accounts) and the CI run of the new e2e job. |
 
 Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a week. Keep a buffer week.
 
 ## Measured results (fill in only when measured)
 
-- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (172 unit tests, 182 integration tests against PostgreSQL 17 via Testcontainers)
+- API build / test status: `dotnet build` succeeded with 0 warnings; `dotnet test` passed on 2026-10-11 (172 unit tests, 190 integration tests against PostgreSQL 17 via Testcontainers)
 - Web build / test status: `npm run build` succeeded (initial bundle 358.43 kB raw / 98.12 kB transferred; settings chunk 4.66 kB / 1.71 kB, lazy); `npm test -- --watch=false` passed on 2026-10-12 (135 tests in 21 files)
 - Metrics endpoint time on the 200,000-row seed (2026-10-11; Release build, API and Docker PostgreSQL 17 on the same Windows 11 dev machine; warm; 20 HTTP calls each with `curl.exe`, time to full response; median / p90):
   - summary, all data: 75.8 / 85.7 ms; one month: 10.0 / 11.4 ms; one region: 15.2 / 16.8 ms
@@ -41,6 +41,11 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
   - Above the limit (104,076 rows): 422 in 53 ms, no file sent.
 - Demo reset (2026-10-12; Debug build via `dotnet run`, same dev machine and Docker PostgreSQL 17): 4.6 s from clicking "Reset data" to the result message in headless Edge. During one reset through `curl.exe`, the API working set rose from 189 to a peak of 234 MB (+45 MB) and private bytes from 139 to 183 MB, sampled every 50 ms; the memory was not given back within 3 s (garbage collector). Relevant to the host's memory limit in M12.
 - Accessibility check (2026-10-12): axe-core 4.10, WCAG 2.0/2.1/2.2 A and AA plus best practices, 8 screen states (signed in and out) at 375, 768 and 1280 px. Before the fixes: 1 moderate issue (duplicate landmark name on Orders). After: no violations. No sideways page scroll at any width. See D050.
+- Production image (2026-10-12): `numera-app` 353 MB (ASP.NET Core 10 runtime plus the Angular build). The e2e test (sign in, import, dashboard, drill-down, export, reset) took 5.8 to 6.8 s against it locally.
+- Render free-tier rehearsal (2026-10-12; the image with `--cpus 0.1 --memory 512m`, local Docker PostgreSQL): first start on an empty database, including migrations and the 200,000-row seed, healthy after 32 s (seed: generate 6.1 s, insert 9.3 s), peak 126 MiB. A demo reset took 10.4 s, peak 182 MiB. Dashboard summary 157 ms, category breakdown 368 ms. The real host adds network latency to Neon.
+- Database size with the demo data: 63 MB (`orders` 55 MB).
+- Fresh clone (2026-10-12, branch `#0012-e2e-deploy-portfolio`): README steps `cp .env.example .env`, set the two secrets, `docker compose up --build`: healthy in 28 s (Docker layer cache warm on this machine, so not a cold build). README test commands from the clone: `dotnet test` 172 + 190 passed; `npm ci` + `npm test` 135 passed; the e2e commands (`npm ci`, `npx playwright install chromium`, `npx playwright test`) passed with Playwright's Chromium.
+- Secret scan (2026-10-12): `.env` never committed; the local signing key appears in no commit; no private keys or cloud tokens in history; the only email addresses are the fictional `numera.example` and `example.test` ones. The local database password matched two commits only because it is the `change-me` placeholder itself.
 - Seed time, 200,000 rows (local Docker PostgreSQL 17, dev machine, single runs on 2026-10-11): generation 522 ms, binary COPY insert 3,274 ms in the service; about 5.6 s wall-clock for `dotnet run -- seed` including process start and migrate check
 - Import of a 100,000-row, 9.08 MB file via `POST /api/imports` (local dev machine, Docker PostgreSQL 17 with 200,000 existing orders, single runs on 2026-10-11): 6.4 s wall-clock for 100,000 rows imported (job duration 6.26 s); 4.6 s for the same file again with all 100,000 rows rejected as existing and 100,000 error rows written. API process working set went from 103 MB after startup to a peak of 180 MB (first upload) and 197 MB (second). Measured with `curl.exe` and the process peak working set, so rough.
 - Import of the same 100,000-row file after the P01 pipeline change (Release build, fresh API process per run, database re-seeded to 200,000 orders before each run, 3 runs each on 2026-10-11): before 5.81 / 5.99 / 6.29 s, after 4.39 to 4.51 s wall-clock; API peak working set before 171 to 181 MB, after 167 to 170 MB. Server-side log for one run: 4,190 ms total, of which scan 289 ms and final database steps 2,152 ms.
@@ -48,14 +53,16 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 ## Known issues
 
 - GitHub Actions: the owner confirmed green runs for the M01 to M05 pull requests; each new branch still needs its own run.
-- Browser checks so far used throwaway Playwright scripts outside the repo (headless Edge). There is no committed browser test yet; the Playwright flow is milestone M12.
+- The committed Playwright test covers the main flow; the accessibility and layout checks (axe, three widths) were run with throwaway scripts and are not part of CI.
 - No refresh token: the session ends when the 60-minute access token expires. The client guard checks token expiry only; a forged token is rejected by the API and the interceptor returns the user to login.
 - A 100,000-row file fits the 10 MB limit only if rows average about 104 bytes or less; the Import page now says so.
-- Forwarded headers are off by default; enable `ForwardedHeaders:Enabled` only when deploying behind a trusted proxy (M12).
+- Forwarded headers are off by default and on in `render.yaml` (Render's proxy). Not yet verified on the live host.
+- The CORS exposed-headers setting is unused in the single-origin setup (D051); it only matters if the app is ever hosted separately.
+- On a brand-new database, EF Core logs one harmless error while it checks for the migrations history table (D051).
 - Global `ng` on this machine is v11; use the local CLI via `npm start` / `npm run build` in `web/`.
 - Not checked with a real screen reader (NVDA or VoiceOver); only automated checks and keyboard walk-throughs.
 - Browser Back to the dashboard lands at the top of the page, not the previous scroll position: the charts are still loading when the router restores it (D043).
 
 ## Next step
 
-Confirm CI is green on `#0011-demo-reset-polish`, merge to `dev`, then start M12 (end-to-end test, Docker, deployment, README, portfolio) on a new `#0012-` branch.
+Confirm CI (including the new e2e job) is green on `#0012-e2e-deploy-portfolio` and merge to `dev`. Then create the Neon database and the Render Blueprint (README > Deploy), share the live URL, and verify the deployed demo; record its URL, cold-start time and memory here and in the README.

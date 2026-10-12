@@ -7,7 +7,8 @@ namespace Numera.IntegrationTests;
 public sealed class TestApiFactory(
     string? connectionString = null,
     int loginPermitLimit = 1000,
-    IReadOnlyDictionary<string, string>? settings = null)
+    IReadOnlyDictionary<string, string>? settings = null,
+    string? webRoot = null)
     : WebApplicationFactory<Program>
 {
     public const string SigningKey = "integration-test-signing-key-0123456789";
@@ -23,6 +24,11 @@ public sealed class TestApiFactory(
         if (connectionString is not null)
         {
             builder.UseSetting("ConnectionStrings:Numera", connectionString);
+        }
+
+        if (webRoot is not null)
+        {
+            builder.UseWebRoot(webRoot);
         }
 
         foreach (var (key, value) in settings ?? new Dictionary<string, string>())

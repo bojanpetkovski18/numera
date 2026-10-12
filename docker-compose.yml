@@ -1,3 +1,6 @@
+# Full stack: `docker compose up --build`, then open http://localhost:8080 (demo login on the sign-in page).
+# Local development only needs the database: `docker compose up -d postgres`.
+# Values come from .env (copy .env.example); nothing secret is stored here.
 services:
   postgres:
     image: postgres:17-alpine
@@ -14,6 +17,23 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # The production image: the API also serves the Angular app (see Dockerfile).
+  app:
+    build:
+      context: .
+    environment:
+      # GSS (Kerberos) encryption is not used; disabling it stops Npgsql looking for libgssapi, which the slim image lacks.
+      ConnectionStrings__Numera: Host=postgres;Port=5432;Database=${POSTGRES_DB:-numera};Username=${POSTGRES_USER:-numera};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (at least 32 characters, see .env.example)}
+      # Creates the schema and loads the demo data on the first start (an empty database only).
+      Database__PrepareOnStartup: "true"
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   numera-pgdata:

@@ -55,8 +55,11 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 - Reset the demo data through the API (signed in; same result as `seed`; 409 while an import runs; 3 per 10 minutes per client): `curl -X POST -H "Authorization: Bearer <token>" http://localhost:5080/api/demo/reset`, or Settings > Reset demo data in the web app
 - Seed DB (reset, then ~200,000 rows): `dotnet run --project src/Numera.Api -- seed`
 - Add a migration: `dotnet tool restore` once, then `dotnet ef migrations add <Name> -p src/Numera.Infrastructure -s src/Numera.Api -o Persistence/Migrations` (dotnet-ef is pinned in `dotnet-tools.json`)
-- Start PostgreSQL: `docker compose up -d` (copy `.env.example` to `.env` first; verified: container reports healthy)
-- Run everything: start PostgreSQL, then run the API and the web app in two terminals
+- Start PostgreSQL only (development): `docker compose up -d postgres` (copy `.env.example` to `.env` first)
+- Full stack in Docker (production image, M12): `docker compose up --build`, then http://localhost:8080; needs `POSTGRES_PASSWORD` and `JWT_SIGNING_KEY` in `.env`; the first start migrates and loads the demo data
+- Build the production image alone: `docker build -t numera .` (repo root; the API plus the Angular app in `wwwroot`)
+- End-to-end test (Playwright, against the full stack on 8080): in `e2e/`, `npm ci` then `npx playwright test` (run `npx playwright install chromium` once, or set `E2E_BROWSER_CHANNEL=msedge` to use an installed Edge; `E2E_BASE_URL` points it elsewhere)
+- Run everything for development: start PostgreSQL, then run the API and the web app in two terminals
 
 ## Working rules
 

@@ -13,6 +13,7 @@ using Numera.Api.Demo;
 using Numera.Api.Imports;
 using Numera.Api.Metrics;
 using Numera.Api.Orders;
+using Numera.Api.WebApp;
 using Numera.Application;
 using Numera.Application.Imports;
 using Numera.Infrastructure;
@@ -148,19 +149,33 @@ if (args.Contains("migrate") || args.Contains("seed"))
 // Fail fast with a clear message if the JWT settings (notably Jwt__SigningKey) are missing or too short.
 _ = app.Services.GetRequiredService<IOptions<JwtOptions>>().Value;
 
+// Containers and hosted demos (Database__PrepareOnStartup=true): bring the schema up to date, make sure the demo
+// user exists, and load the demo data into an empty database. Existing data is never replaced here.
+if (app.Configuration.GetValue("Database:PrepareOnStartup", false))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<NumeraDbContext>();
+    await db.Database.MigrateAsync();
+    await scope.ServiceProvider.GetRequiredService<DemoUserSeeder>().EnsureAsync();
+    if (!await db.Orders.AnyAsync())
+    {
+        await scope.ServiceProvider.GetRequiredService<DemoSeeder>().ResetAndSeedAsync();
+    }
+}
+
 if (useForwardedHeaders)
 {
     app.UseForwardedHeaders();
 }
 
-app.Use(async (context, next) =>
-{
-    // Stops browsers from guessing a different content type (relevant for the CSV downloads).
-    context.Response.Headers.XContentTypeOptions = "nosniff";
-    await next(context);
-});
+app.UseSecurityHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+var serveWebApp = app.Environment.HasWebApp();
+if (serveWebApp)
+{
+    app.UseWebAppFiles();
+}
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -173,6 +188,10 @@ app.MapImportEndpoints();
 app.MapMetricsEndpoints();
 app.MapOrderEndpoints();
 app.MapDemoEndpoints();
+if (serveWebApp)
+{
+    app.MapWebAppFallback();
+}
 
 app.Run();
 

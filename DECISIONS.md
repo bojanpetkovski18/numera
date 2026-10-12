@@ -396,4 +396,52 @@ Measured with `EXPLAIN (ANALYZE)` on the local Docker PostgreSQL 17 after `ANALY
 - **Left as is:** data-table links are 19 px tall, but their rows are 28 px apart, which meets WCAG 2.5.8's spacing exception. The import file input is visually hidden by design; its visible label is the target.
 - **Not checked by tools:** a screen-reader run with NVDA or VoiceOver.
 
-_Add new decisions below as D051, D052, ..._
+## D051: One production image; the API serves the web app
+
+- The root `Dockerfile` builds the Angular app (Node 24), publishes the API (.NET 10 SDK) and copies the app into the API's `wwwroot`. The runtime image is ASP.NET Core only and runs as the image's non-root `app` user.
+- The API serves the app when `wwwroot/index.html` exists. Built files are anonymous, hashed files are cached for a year, and `index.html` is revalidated. App paths fall back to `index.html`; unknown `/api/...` paths stay a JSON 404.
+- **Why one image:** one free service to host and one cold start, same origin (no CORS, no cross-site cookie questions), and Compose, CI and the hosted demo all run exactly the same artifact.
+- A first version had a separate nginx image for the app. It worked, but it meant two images to keep in step and two services to wake on a free host, so it was dropped.
+- `Database__PrepareOnStartup=true` applies migrations, ensures the demo user and loads the demo data into an empty database on start. Existing data is never replaced.
+  - Measured with the image limited to 0.1 CPU and 512 MB (Render's free size) on an empty database: healthy after 32 s, including the 200,000-row seed; peak memory 126 MiB.
+  - On a brand-new database, EF Core logs one error while it checks for the migrations history table before creating it. This is harmless and expected.
+- The container's connection string sets `Gss Encryption Mode=Disable`: otherwise Npgsql looks for a Kerberos library the slim image does not have, and logs an error on every start.
+- In Compose, the separate dev database command is now `docker compose up -d postgres`, because `docker compose up` starts the whole stack.
+
+## D052: Hosting: Render free web service and Neon free PostgreSQL
+
+Checked 2026-10-12 against provider docs and recent third-party summaries:
+
+| Option | Free tier at the time of checking | Verdict |
+|---|---|---|
+| Render web service | 512 MB, 0.1 CPU, Docker supported; sleeps after 15 min idle, about 1 min to wake; 750 instance hours a month | chosen for the app |
+| Render PostgreSQL | expires 30 days after creation | not used |
+| Neon PostgreSQL | 0.5 GB storage per project, 100 compute hours a month, sleeps after 5 min idle, does not expire | chosen for the database (the demo database measured 63 MB) |
+| Google Cloud Run | generous monthly free allowance, fast cold starts, but needs a billing account | second choice |
+| Fly.io, Koyeb | no dependable free tier for new accounts in 2026 | not used |
+
+- **Cost:** $0 a month.
+- **Limits, stated honestly in the README:**
+  - the first request after 15 idle minutes waits about a minute for the service to wake;
+  - Neon adds a short delay after 5 idle minutes;
+  - at 0.1 CPU a demo reset took 10.4 s (measured locally with the same limits), against 4.6 s on a full CPU.
+- **Memory:** idle 126 MiB, peak 182 MiB during a reset, under the 512 MB limit.
+- **Secrets:** Render generates the JWT signing key (`generateValue`); the Neon connection string is pasted into Render's environment settings (`sync: false`). Nothing secret is in `render.yaml`.
+- **Proxy:** forwarded headers are on in the hosted demo (Render's proxy), so the rate limits see the real client address. In Compose there is no proxy, so they stay off.
+- The demo deploys from `dev`, the repository's default branch.
+
+## D053: Content-Security-Policy and critical CSS
+
+- Every response carries a strict CSP: same-origin scripts only, no inline scripts. Styles allow `'unsafe-inline'`, because Angular adds component styles as `<style>` elements.
+- Angular's production build inlines critical CSS and loads the full stylesheet with an inline `onload` handler, which the CSP blocks: the global styles never applied in the production image. The development server has no CSP, so this only showed up in the production screenshots. Critical-CSS inlining is now off (`optimization.styles.inlineCritical: false`), so the stylesheet is a plain `<link>`. Allowing inline scripts would have weakened the policy for a small first-paint gain.
+- The end-to-end test now fails on any browser console error, so a CSP violation fails CI.
+
+## D054: End-to-end test
+
+- One Playwright test (`e2e/`) covers the spec's main flow: sign in, import a CSV with good and bad rows, check that the dashboard counts the new orders, drill down to exactly those rows, export them and check the file content, then reset the demo.
+  - The imported rows use a region name unique to the run, so the drill-down and export checks are exact whatever else is in the data.
+  - Ending with the reset leaves a shared demo as it was found.
+- It runs against the production image started with Compose, in CI as well, so the Dockerfile, the static-file hosting and the CSP are covered too.
+- Locally it can use an installed Edge (`E2E_BROWSER_CHANNEL=msedge`); CI installs Playwright's Chromium. Playwright is pinned to 1.63.0, the newest release older than two weeks at the time.
+
+_Add new decisions below as D055, D056, ..._
