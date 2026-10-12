@@ -1,0 +1,17 @@
+# Keep build contexts small and free of secrets and local artifacts.
+.git
+.github
+.env
+**/.env
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/.angular
+**/TestResults
+e2e/test-results
+e2e/playwright-report
+docs
+prompts
+tests
+*.md

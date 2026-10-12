@@ -1,3 +1,6 @@
+# Full stack: `docker compose up --build`, then open http://localhost:8080 (demo login on the sign-in page).
+# Local development only needs the database: `docker compose up -d postgres`.
+# Values come from .env (copy .env.example); nothing secret is stored here.
 services:
   postgres:
     image: postgres:17-alpine
@@ -14,6 +17,33 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Numera.Api/Dockerfile
+    environment:
+      # GSS (Kerberos) encryption is not used; disabling it stops Npgsql looking for libgssapi, which the slim image lacks.
+      ConnectionStrings__Numera: Host=postgres;Port=5432;Database=${POSTGRES_DB:-numera};Username=${POSTGRES_USER:-numera};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (at least 32 characters, see .env.example)}
+      Database__PrepareOnStartup: "true"
+      # Requests reach the API only through the web container's proxy, which sets X-Forwarded-For.
+      ForwardedHeaders__Enabled: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: web
+    environment:
+      API_UPSTREAM: http://api:8080
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
 
 volumes:
   numera-pgdata:
