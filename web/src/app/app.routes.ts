@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { LoginPage } from './pages/login/login-page';
-import { PlaceholderPage } from './pages/placeholder-page';
+import { NotFoundPage } from './pages/not-found/not-found-page';
 import { Shell } from './shell/shell';
 
 export const routes: Routes = [
@@ -29,12 +29,11 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
-        component: PlaceholderPage,
+        loadComponent: () => import('./pages/settings/settings-page').then((m) => m.SettingsPage),
         title: 'Settings · Numera',
-        data: { heading: 'Settings', description: 'Demo data reset arrives in milestone M11.' },
       },
     ],
   },
-  { path: '**', redirectTo: '' },
+  { path: '**', component: NotFoundPage, title: 'Page not found · Numera' },
 ];
 

@@ -144,6 +144,27 @@ h3 {
   border-color: var(--color-muted);
 }
 
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover,
+.btn[aria-disabled='true']:hover {
+  border-color: var(--color-border);
+}
+
+.btn.danger {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: #ffffff;
+}
+
+.btn.danger:hover:not(:disabled):not([aria-disabled='true']) {
+  filter: brightness(0.9);
+}
+
 .data-table {
   width: 100%;
   margin-top: var(--space-3);
