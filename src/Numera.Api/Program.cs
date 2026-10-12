@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Numera.Api.Auth;
+using Numera.Api.Demo;
 using Numera.Api.Imports;
 using Numera.Api.Metrics;
 using Numera.Api.Orders;
@@ -96,17 +97,32 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IConfiguration>((lim
                 QueueLimit = 0,
             }));
 
+    // A full reset takes a few seconds of database work, so a client may only start a few per window.
+    var resetPermitLimit = configuration.GetValue("RateLimiting:ResetPermitLimit", 3);
+    var resetWindowSeconds = configuration.GetValue("RateLimiting:ResetWindowSeconds", 600);
+    limiter.AddPolicy(DemoEndpoints.ResetRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = resetPermitLimit,
+                Window = TimeSpan.FromSeconds(resetWindowSeconds),
+                QueueLimit = 0,
+            }));
+
     limiter.OnRejected = async (context, ct) =>
     {
+        var retryText = "Wait a moment before trying again.";
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
         {
             context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+            var minutes = (int)Math.Ceiling(retryAfter.TotalMinutes);
+            retryText = minutes > 1 ? $"Try again in about {minutes} minutes." : retryText;
         }
 
-        await Results.Problem(
-                statusCode: StatusCodes.Status429TooManyRequests,
-                title: "Too many login attempts",
-                detail: "Wait a moment before trying again.")
+        var policy = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
+        var title = policy == DemoEndpoints.ResetRateLimitPolicy ? "Too many demo resets" : "Too many login attempts";
+        await Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: title, detail: retryText)
             .ExecuteAsync(context.HttpContext);
     };
 });
@@ -156,6 +172,7 @@ app.MapAuthEndpoints();
 app.MapImportEndpoints();
 app.MapMetricsEndpoints();
 app.MapOrderEndpoints();
+app.MapDemoEndpoints();
 
 app.Run();
 

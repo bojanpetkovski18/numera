@@ -51,9 +51,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
     // Imports run one at a time (transaction-scoped advisory lock), so no other transaction can insert the same
     // keys between finding existing rows and inserting the rest. This replaces INSERT ... ON CONFLICT DO NOTHING,
     // whose per-row speculative insertion measured about 2.6x slower for 100,000 rows.
-    private const long ImportLockKey = 0x4E554D455241; // "NUMERA"
-
-    private const string LockSql = "SELECT pg_advisory_xact_lock(@key)";
+    // The lock (DataLocks.OrderWrites) is shared with the demo reset.
 
     // Moves rows whose key already exists out of the staging table and into import_errors in one statement.
     private const string RejectExistingSql = """
@@ -154,9 +152,9 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
             var connection = (NpgsqlConnection)db.Database.GetDbConnection();
             await using var transaction = await connection.BeginTransactionAsync(ct);
 
-            await using (var lockCommand = new NpgsqlCommand(LockSql, connection, transaction))
+            await using (var lockCommand = new NpgsqlCommand(DataLocks.WaitSql, connection, transaction))
             {
-                lockCommand.Parameters.AddWithValue("key", ImportLockKey);
+                lockCommand.Parameters.AddWithValue("key", DataLocks.OrderWrites);
                 await lockCommand.ExecuteNonQueryAsync(ct);
             }
 

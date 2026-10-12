@@ -164,7 +164,7 @@ describe('OrdersPage', () => {
     await settle(fixture);
 
     expect(root().querySelector('[role="alert"]')?.textContent).toContain('Orders could not be loaded. Database unavailable.');
-    button('Retry').click();
+    button('Try again').click();
     await settle(fixture);
     await respond(page([row(1)], 1));
     expect(root().querySelectorAll('tbody tr').length).toBe(1);

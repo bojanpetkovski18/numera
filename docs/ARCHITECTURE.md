@@ -68,6 +68,10 @@ Breakdown details: groups that have only refunded or cancelled lines are listed 
 - More than 100,000 matching rows returns 422 with `rowCount` and `maxRows`; no partial file is sent.
 - Count and rows come from one read-only REPEATABLE READ snapshot; rows are streamed, not buffered (DECISIONS D044).
 
+## Demo reset
+
+`POST /api/demo/reset` (signed in, rate limited) restores the original demo data in one transaction: it truncates `orders` and `import_errors` (ids restart), deletes finished `import_jobs`, and bulk-loads the deterministic 200,000-row seed (the same code as the `seed` command). It shares an advisory lock with imports: if one is running, the reset returns 409 instead of waiting. Returns `{ orderLines, completedAt }` (DECISIONS D047).
+
 ## Drill-down
 
 Clicking a chart item (or its data-table link) opens `/orders` with the dashboard filter narrowed to that item, plus `status=completed`:

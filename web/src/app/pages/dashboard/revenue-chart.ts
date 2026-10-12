@@ -39,7 +39,7 @@ import { RevenueTimeseries } from './metrics.models';
       @if (series.error(); as error) {
         <div class="state error" role="alert">
           <p>Revenue over time could not be loaded. {{ message(error) }}</p>
-          <button type="button" class="btn" (click)="series.reload()">Retry</button>
+          <button type="button" class="btn" (click)="series.reload()">Try again</button>
         </div>
       } @else if (series.isLoading()) {
         <div class="skeleton chart-skeleton" aria-hidden="true"></div>
