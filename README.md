@@ -130,7 +130,7 @@ All commands, including migrations and maintenance, are listed in [CLAUDE.md](CL
 
 ```bash
 dotnet test                                   # unit tests and integration tests (needs Docker: Testcontainers starts PostgreSQL)
-cd web && npm test -- --watch=false           # Angular component and unit tests
+cd web && npm ci && npm test -- --watch=false # Angular component and unit tests
 ```
 
 End to end (Playwright), against the stack from `docker compose up --build`:
