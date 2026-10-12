@@ -28,14 +28,21 @@ async function ordersKpi(page: Page): Promise<number> {
 }
 
 test('sign in, import, dashboard, drill down, export, reset', async ({ page }) => {
+  // Any console error fails the run: a Content-Security-Policy violation, for example, only shows up there.
+  const consoleErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  page.on('pageerror', (error) => consoleErrors.push(error.message));
   await test.step('sign in with the demo account', async () => {
     await page.goto('/login');
     await page.getByRole('button', { name: 'Fill in demo credentials' }).click();
     await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    // The global stylesheet is applied (the page background comes from it, not from the browser default).
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 242, 236)');
   });
-
   const ordersBefore = await ordersKpi(page);
 
   await test.step('import a CSV with two good rows and one bad row', async () => {
@@ -94,4 +101,6 @@ test('sign in, import, dashboard, drill down, export, reset', async ({ page }) =
     await page.goto('/dashboard');
     await expect.poll(() => ordersKpi(page)).toBe(SEEDED_ORDERS);
   });
+
+  expect(consoleErrors).toEqual([]);
 });
