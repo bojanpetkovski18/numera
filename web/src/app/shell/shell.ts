@@ -34,6 +34,11 @@ export class Shell {
   constructor() {
     // A single-page app does not announce a new page by itself. When the page (not just its query string) changes,
     // focus moves to the main content, so screen readers read the new page and Tab continues from there.
+    // The shell itself appears after signing in: that is a page change too. On a fresh page load (no earlier
+    // navigation) focus stays at the top of the document, where screen readers start anyway.
+    if (this.router.currentNavigation()?.previousNavigation) {
+      afterNextRender(() => this.focusMain(), { injector: this.injector });
+    }
     let lastPath = pathOf(this.router.url);
     this.router.events
       .pipe(

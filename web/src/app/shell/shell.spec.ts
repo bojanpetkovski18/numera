@@ -86,6 +86,27 @@ describe('Shell keyboard and focus', () => {
     expect(document.activeElement).toBe(inPage);
   });
 
+  it('arriving in the shell from another page (signing in) puts focus on the content', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: 'login', component: PageB },
+          { path: '', component: Shell, children: [{ path: 'a', component: PageA }] },
+        ]),
+      ],
+    });
+    root.remove();
+    const harness = await RouterTestingHarness.create('/login');
+    root = harness.fixture.nativeElement as HTMLElement;
+    document.body.appendChild(root);
+
+    await harness.navigateByUrl('/a');
+    await settle();
+
+    expect(document.activeElement?.id).toBe('main-content');
+  });
+
   it('Escape closes the phone menu and returns focus to the menu button', async () => {
     const menu = root.querySelector('.menu-button') as HTMLButtonElement;
     menu.style.display = 'inline-block'; // jsdom ignores the phone-width media query that shows this button

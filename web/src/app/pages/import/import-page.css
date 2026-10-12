@@ -44,6 +44,11 @@ h2 {
   font-size: var(--font-size-sm);
 }
 
+.hint a {
+  display: inline-block;
+  padding: var(--space-1) 0;
+}
+
 /* Visually hidden but focusable, so the native file dialog works with the keyboard. */
 .file-input {
   position: absolute;
@@ -96,6 +101,7 @@ h2 {
 }
 
 .format summary {
+  padding: var(--space-2) 0;
   cursor: pointer;
   color: var(--color-ink);
   font-weight: var(--font-weight-medium);
