@@ -13,6 +13,7 @@ using Numera.Api.Demo;
 using Numera.Api.Imports;
 using Numera.Api.Metrics;
 using Numera.Api.Orders;
+using Numera.Api.WebApp;
 using Numera.Application;
 using Numera.Application.Imports;
 using Numera.Infrastructure;
@@ -167,14 +168,14 @@ if (useForwardedHeaders)
     app.UseForwardedHeaders();
 }
 
-app.Use(async (context, next) =>
-{
-    // Stops browsers from guessing a different content type (relevant for the CSV downloads).
-    context.Response.Headers.XContentTypeOptions = "nosniff";
-    await next(context);
-});
+app.UseSecurityHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+var serveWebApp = app.Environment.HasWebApp();
+if (serveWebApp)
+{
+    app.UseWebAppFiles();
+}
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -187,6 +188,10 @@ app.MapImportEndpoints();
 app.MapMetricsEndpoints();
 app.MapOrderEndpoints();
 app.MapDemoEndpoints();
+if (serveWebApp)
+{
+    app.MapWebAppFallback();
+}
 
 app.Run();
 

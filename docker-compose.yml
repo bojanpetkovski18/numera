@@ -18,31 +18,21 @@ services:
       timeout: 3s
       retries: 10
 
-  api:
+  # The production image: the API also serves the Angular app (see Dockerfile).
+  app:
     build:
       context: .
-      dockerfile: src/Numera.Api/Dockerfile
     environment:
       # GSS (Kerberos) encryption is not used; disabling it stops Npgsql looking for libgssapi, which the slim image lacks.
       ConnectionStrings__Numera: Host=postgres;Port=5432;Database=${POSTGRES_DB:-numera};Username=${POSTGRES_USER:-numera};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (at least 32 characters, see .env.example)}
+      # Creates the schema and loads the demo data on the first start (an empty database only).
       Database__PrepareOnStartup: "true"
-      # Requests reach the API only through the web container's proxy, which sets X-Forwarded-For.
-      ForwardedHeaders__Enabled: "true"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-
-  web:
-    build:
-      context: web
-    environment:
-      API_UPSTREAM: http://api:8080
     ports:
       - "${WEB_PORT:-8080}:8080"
     depends_on:
-      - api
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

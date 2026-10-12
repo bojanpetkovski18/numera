@@ -14,4 +14,6 @@ e2e/playwright-report
 docs
 prompts
 tests
+# The web app's dev settings and Angular cache are not needed in the image.
+web/.vscode
 *.md
