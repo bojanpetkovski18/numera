@@ -62,7 +62,7 @@
     @if (orders.error(); as error) {
       <div class="state error" role="alert">
         <p>Orders could not be loaded. {{ message(error) }}</p>
-        <button type="button" class="btn" (click)="orders.reload()">Retry</button>
+        <button type="button" class="btn" (click)="orders.reload()">Try again</button>
       </div>
     } @else if (firstLoad()) {
       <div class="skeleton-rows" aria-hidden="true">
@@ -86,7 +86,7 @@
           </div>
         </div>
       } @else {
-        <div class="table-wrap" [class.stale]="orders.isLoading()" tabindex="0" role="region" aria-labelledby="grid-title">
+        <div class="table-wrap" [class.stale]="orders.isLoading()" tabindex="0" role="region" aria-label="Order lines table, scrolls sideways">
           <table class="orders">
             <caption class="visually-hidden">{{ caption() }}</caption>
             <thead>

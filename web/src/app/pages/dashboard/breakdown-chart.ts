@@ -20,7 +20,7 @@ import { RevenueBreakdown } from './metrics.models';
       @if (breakdown.error(); as error) {
         <div class="state error" role="alert">
           <p>{{ title() }} could not be loaded. {{ message(error) }}</p>
-          <button type="button" class="btn" (click)="breakdown.reload()">Retry</button>
+          <button type="button" class="btn" (click)="breakdown.reload()">Try again</button>
         </div>
       } @else if (breakdown.isLoading()) {
         <div class="skeleton chart-skeleton" aria-hidden="true"></div>

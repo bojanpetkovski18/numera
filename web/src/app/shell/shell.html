@@ -1,6 +1,8 @@
+<a class="skip-link" href="#main-content" (click)="skipToMain($event)">Skip to main content</a>
 <div class="shell">
   <header class="topbar">
     <button
+      #menuButton
       type="button"
       class="menu-button"
       aria-controls="primary-nav"
@@ -32,7 +34,7 @@
     </ul>
   </nav>
 
-  <main class="content">
+  <main #main id="main-content" class="content" tabindex="-1">
     <router-outlet />
   </main>
 </div>

@@ -18,7 +18,7 @@ interface Kpi {
       @if (summary.error(); as error) {
         <div class="card state error" role="alert">
           <p>Key figures could not be loaded. {{ message(error) }}</p>
-          <button type="button" class="btn" (click)="summary.reload()">Retry</button>
+          <button type="button" class="btn" (click)="summary.reload()">Try again</button>
         </div>
       } @else if (summary.isLoading()) {
         <div class="grid">

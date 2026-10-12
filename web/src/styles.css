@@ -49,6 +49,10 @@ body {
   min-height: 100%;
 }
 
+a {
+  color: var(--color-primary);
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-ink);
@@ -190,6 +194,7 @@ h3 {
 }
 
 .table-toggle summary {
+  padding: var(--space-2) 0;
   cursor: pointer;
   color: var(--color-muted);
 }
@@ -221,7 +226,8 @@ h3 {
 
 .back-link {
   display: inline-block;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
+  padding: var(--space-1) 0;
   color: var(--color-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
