@@ -2,6 +2,33 @@
 
 Material for an Upwork portfolio entry and similar profiles. Everything here describes what is built and verified in this repository; numbers appear only where they were measured and recorded in [PROGRESS.md](../../PROGRESS.md).
 
+## Upwork portfolio entry (copy and paste)
+
+Upwork's limits differ between its help pages (title 40 or 70 characters, description 300 or 600). These texts fit the stricter limits; a longer description is included for when the editor allows it.
+
+| Field | Text | Characters |
+|---|---|---|
+| Project title | Sales Reporting App: Angular + .NET | 35 |
+| Alternative title | CSV to KPI Dashboard with Drill-Down | 36 |
+| Your role | Solo full-stack developer: architecture, Angular, .NET API, PostgreSQL, tests, Docker, CI | 89 |
+| Skills (pick 5) | Angular, ASP.NET Core, PostgreSQL, Dashboard, Data Visualization (alternatives: C#, .NET, TypeScript, Docker, CSV) | |
+| Project link | The GitHub repository (and the live demo link once it is deployed) | |
+
+**Project description (284 characters):**
+
+> Web app that turns a sales CSV into a reporting dashboard: validated import with an error report, KPI cards and charts, shared filters, click-through from any chart to the exact rows behind it, and CSV export. Angular 22, ASP.NET Core (.NET 10), PostgreSQL, Docker; tested end to end.
+
+**Longer description, if 600 characters are allowed:**
+
+> Small teams often run their sales reporting from spreadsheets. This web app turns a sales CSV into a reporting dashboard: an import that validates every row and explains each rejected one, KPI cards and charts computed in the database from one set of definitions, filters shared by every screen, one click from any chart to the exact rows behind it, and CSV export of the current view. Built solo with Angular 22, ASP.NET Core on .NET 10 and PostgreSQL; tested from the database to the browser; runs with one Docker command. Fictional demo data; built with AI assistance.
+
+**Images, in this order, with captions:**
+
+1. `docs/screenshots/dashboard.png`: *Dashboard: revenue, orders, average order value and refund rate, revenue over time and by category and region. Every number is computed in the database from one set of definitions.*
+2. `docs/screenshots/orders-drill-down.png`: *Clicking the Blends bar opens the orders grid on exactly those order lines. The chips show why the list is filtered; the view can be sorted, searched and exported to CSV.*
+3. `docs/screenshots/import-result.png`: *Import result: valid rows imported, problem rows skipped with the reason for each, downloadable as an error report. Re-imported rows are recognized and not counted twice.*
+4. `docs/screenshots/dashboard-mobile.png`: *The same dashboard on a phone: filters, KPI cards and charts stack into one column.*
+
 ## Portfolio title
 
 **Sales Reporting Dashboard: CSV Import, KPIs, Drill-Down and Export (Angular + .NET)**
