@@ -7,7 +7,7 @@ services:
     runtime: docker
     plan: free
     region: frankfurt # keep it close to the Neon region (AWS eu-central-1, Frankfurt)
-    branch: dev
+    branch: main # releases only: dev is merged into main for each release
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health

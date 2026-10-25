@@ -428,7 +428,7 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - **Memory:** idle 126 MiB, peak 182 MiB during a reset, under the 512 MB limit.
 - **Secrets:** Render generates the JWT signing key (`generateValue`); the Neon connection string is pasted into Render's environment settings (`sync: false`). Nothing secret is in `render.yaml`.
 - **Proxy:** forwarded headers are on in the hosted demo (Render's proxy), so the rate limits see the real client address. In Compose there is no proxy, so they stay off.
-- The demo deploys from `dev`, the repository's default branch.
+- The demo deploys from `dev`, the repository's default branch. (Changed in D055: it now deploys from `main`.)
 
 ## D053: Content-Security-Policy and critical CSS
 
@@ -444,4 +444,10 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - It runs against the production image started with Compose, in CI as well, so the Dockerfile, the static-file hosting and the CSP are covered too.
 - Locally it can use an installed Edge (`E2E_BROWSER_CHANNEL=msedge`); CI installs Playwright's Chromium. Playwright is pinned to 1.63.0, the newest release older than two weeks at the time.
 
-_Add new decisions below as D055, D056, ..._
+## D055: Releases on main; the demo deploys from main
+
+- `dev` stays the default branch, where milestone and fix branches are merged through pull requests. `main` holds releases only: `dev` is merged into `main` for each release, and the release is tagged (`v1.0.0` is the first).
+- The live demo now follows `main` (`render.yaml`, replacing the `dev` branch named in D052), so it changes only when a release is made, not with every merge into `dev`.
+- Versions follow semantic versioning: patch for fixes and docs, minor for new features, major for breaking changes to the API or the data.
+
+_Add new decisions below as D056, D057, ..._

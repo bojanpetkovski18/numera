@@ -163,7 +163,7 @@ The hosted demo is one Render web service built from the `Dockerfile`, with a fr
 1. Create a Neon project (AWS Frankfurt). Take the **direct** (not pooled) connection details and write them as
    `Host=<host>;Database=<db>;Username=<user>;Password=<password>;SSL Mode=Require;Gss Encryption Mode=Disable`.
 2. In Render: **New > Blueprint**, select this repository and `render.yaml`, and paste the connection string into `ConnectionStrings__Numera` when asked. Render generates the signing key.
-3. The first start creates the schema and loads the demo data. Free-tier limits and cost are in [DECISIONS.md](DECISIONS.md) (D052).
+3. The first start creates the schema and loads the demo data. After that, Render redeploys whenever a release is merged into `main` (day-to-day work goes to `dev`). Free-tier limits and cost are in [DECISIONS.md](DECISIONS.md) (D052, D055).
 
 ### Project documents
 
