@@ -457,4 +457,16 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - M17 waits for the owner's confirmation: it needs an API key and a cost limit, and the app must keep working without it.
 - Workspaces and roles, scheduled emails, PDF/Excel export, Excel upload, forecasting and dark mode stay out of version 2: each is large or needs paid services, and none is needed to show the "from numbers to decisions" story.
 
-_Add new decisions below as D057, D058, ..._
+## D057: How period comparison works
+
+- **Changes are computed on the server**, in `MetricDefinitions`, next to the KPI definitions, and returned in `changes`. The web app only formats them, so there is one definition of "+12.4%", tested once.
+- **Changes use the reported, rounded values** of both periods, so the percentage on a card can be checked against the two numbers shown on it.
+- **The refund rate change is a difference in percentage points**, not a relative change: going from 4.0% to 5.0% is "+1.0 pts", not "+25%", which would overstate a small move.
+- **"Previous period" is the same number of days**, not the previous calendar month or quarter. It works for any range, including custom ones, and needs no rules about partial months. Q3 (92 days) is therefore compared with 31 March to 30 June. Calendar-aligned comparison would be a separate mode if clients ask for it.
+- **The comparison series is aligned by moving each comparison day forward** by the gap and grouping it into the current periods. The alternative, grouping the comparison period by its own calendar weeks or months, gives series of different lengths that cannot be drawn on one axis. The cost is that a comparison "week" can cover different weekdays when the gap is not a multiple of 7, which is documented.
+- **Each period is its own SQL query** (two round trips) rather than one query over both ranges. It reuses the existing filter SQL unchanged and guarantees that the comparison equals the summary for those dates. Measured cost: about 30 ms extra for a quarter; documented in `PROGRESS.md`.
+- **Comparison is a dashboard setting** like the granularity: it is kept in the dashboard URL and in the store, but never sent to the orders grid, exports or drill-downs, and "Reset filters" keeps it.
+- **The KPI cards say "vs last year"**; the full dates are shown once above the cards. The longer "same period last year" made every card wrap at desktop widths. The chart legend and data table, which have room, keep the full name.
+- The breakdown charts are not compared: explaining the change by group is M14's job.
+
+_Add new decisions below as D058, D059, ..._

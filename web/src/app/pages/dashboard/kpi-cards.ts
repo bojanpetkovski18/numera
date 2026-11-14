@@ -3,7 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { FilterStore } from '../../core/filters/filter.store';
 import { formatCurrency, formatDate, formatInteger, formatKpiCurrency, formatPercent } from '../../core/format/format';
 import { problemMessage } from '../../core/http/problem';
-import { COMPARISON_NAMES, COMPARISON_TITLES, ChangeView, changeView, compareParams } from './comparison';
+import { COMPARISON_NAMES, COMPARISON_SHORT_NAMES, COMPARISON_SHORT_TITLES, ChangeView, changeView, compareParams } from './comparison';
 import { MetricsSummary } from './metrics.models';
 
 interface Kpi {
@@ -13,7 +13,7 @@ interface Kpi {
   /** Only when the figures were compared with another period. */
   readonly comparison?: {
     readonly change: ChangeView | null;
-    /** "Previous period: $9,234,567" */
+    /** "Previous period: $9,234,567" or "Last year: $9,234,567" */
     readonly before: string;
   };
 }
@@ -53,7 +53,8 @@ interface Kpi {
                   <p class="change" [class.good]="change.tone === 'good'" [class.bad]="change.tone === 'bad'">
                     <span aria-hidden="true">{{ change.arrow }} {{ change.text }}</span>
                     <span class="visually-hidden">{{ change.spoken }}</span>
-                    <span class="vs">vs {{ comparisonName() }}</span>
+                    <!-- The leading space is kept: whitespace between elements is not. -->
+                    <span class="vs"> vs {{ comparisonName() }}</span>
                   </p>
                 } @else {
                   <p class="change none">Nothing to compare with</p>
@@ -157,7 +158,7 @@ export class KpiCards {
 
   protected readonly comparisonName = computed(() => {
     const mode = this.loaded()?.comparison?.mode;
-    return mode ? COMPARISON_NAMES[mode] : '';
+    return mode ? COMPARISON_SHORT_NAMES[mode] : '';
   });
 
   /** "Compared with Mar 31, 2026 to Jun 30, 2026 (previous period)." The dates come from the API, which defines them. */
@@ -174,7 +175,7 @@ export class KpiCards {
     const refundBase = s.completedLines + s.refundedLines;
     const c = s.comparison ?? null;
     const changes = s.changes ?? null;
-    const title = c ? COMPARISON_TITLES[c.mode] : '';
+    const title = c ? COMPARISON_SHORT_TITLES[c.mode] : '';
     const compared = (change: ChangeView | null, before: string) => (c ? { comparison: { change, before: `${title}: ${before}` } } : {});
     return [
       {

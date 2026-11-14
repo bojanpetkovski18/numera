@@ -13,6 +13,20 @@ export const COMPARISON_TITLES: Readonly<Record<ComparisonModeName, string>> = {
   year: 'Same period last year',
 };
 
+/**
+ * Short names for the cramped KPI cards ("vs last year", "Last year: $1,234"). The full dates are shown once above
+ * the cards, so "last year" there cannot be mistaken for the whole of last year.
+ */
+export const COMPARISON_SHORT_NAMES: Readonly<Record<ComparisonModeName, string>> = {
+  previous: 'previous period',
+  year: 'last year',
+};
+
+export const COMPARISON_SHORT_TITLES: Readonly<Record<ComparisonModeName, string>> = {
+  previous: 'Previous period',
+  year: 'Last year',
+};
+
 /** The `compare` query parameter to add to a metrics request, or nothing without a comparison. */
 export function compareParams(compare: ComparisonModeName | null): { compare?: ComparisonModeName } {
   return compare ? { compare } : {};

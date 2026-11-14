@@ -117,7 +117,7 @@ describe('KpiCards with a comparison', () => {
       // A falling refund rate is good news.
       ['Refund rate', '▼ -8.3 pts', 'Down 8.3 pts', 'good', 'Previous period: 33.3%'],
     ]);
-    expect(el().querySelector('.vs')?.textContent).toBe('vs previous period');
+    expect(el().querySelector('.vs')?.textContent).toBe(' vs previous period');
   });
 
   it('says when there is nothing to compare with', async () => {
@@ -130,7 +130,7 @@ describe('KpiCards with a comparison', () => {
 
     const changes = Array.from(el().querySelectorAll('.change')).map((c) => c.textContent?.trim());
     expect(changes).toEqual(Array(4).fill('Nothing to compare with'));
-    expect(el().querySelector('.detail')?.textContent?.trim()).toBe('Same period last year: $0.00');
+    expect(el().querySelector('.detail')?.textContent?.trim()).toBe('Last year: $0.00');
   });
 
   it('drops the comparison when the range can no longer be compared', async () => {

@@ -24,7 +24,7 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 
 | # | Milestone | Est. sessions | Status | Verified on | Notes |
 |---|---|---|---|---|---|
-| M13 | Period comparison | 2 | in progress | - | |
+| M13 | Period comparison | 2 | complete locally | 2026-11-14 | `compare=previous\|year` on summary and timeseries; KPI changes, comparison line, legend and table column; unit, Testcontainers and component tests; endpoints called and timed on the seed; Edge run at 1280, 768 and 375 px with axe (no violations), no console errors, no sideways scroll; existing e2e test passed against the rebuilt image. CI run pending. |
 | M14 | "What changed?" | 2 | not started | - | |
 | M15 | Import column mapping | 3 | not started | - | |
 | M16 | Saved views and share links | 3 | not started | - | |
@@ -55,6 +55,11 @@ Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a we
 - Production image (2026-10-12): `numera-app` 353 MB (ASP.NET Core 10 runtime plus the Angular build). The e2e test (sign in, import, dashboard, drill-down, export, reset) took 5.8 to 6.8 s against it locally.
 - Render free-tier rehearsal (2026-10-12; the image with `--cpus 0.1 --memory 512m`, local Docker PostgreSQL): first start on an empty database, including migrations and the 200,000-row seed, healthy after 32 s (seed: generate 6.1 s, insert 9.3 s), peak 126 MiB. A demo reset took 10.4 s, peak 182 MiB. Dashboard summary 157 ms, category breakdown 368 ms. The real host adds network latency to Neon.
 - Database size with the demo data: 63 MB (`orders` 55 MB).
+- Period comparison on the 200,000-row seed (2026-11-14; production image from `docker compose up --build`, Docker PostgreSQL 17, same Windows 11 dev machine; warm; 20 calls each with `curl`, time to full response; median / p90):
+  - summary, Q3 2026: 33.0 / 51.7 ms without comparison, 63.1 / 71.2 ms with `compare=previous`; twelve months with `compare=year` (so nearly all 200,000 rows read twice): 251.7 / 281.8 ms
+  - timeseries, Q3 2026 by week: 39.6 / 53.5 ms without, 75.2 / 81.4 ms with `compare=previous`; twelve months by day with `compare=year`: 331.5 / 351.5 ms; twelve months by month, Europe, `compare=previous`: 121.2 / 137.5 ms
+  - Checked by hand on the same data: the Q3 2026 `compare=year` values equal the summary for Q3 2025 requested directly; the monthly comparison series adds up to $1,138,762.86 against $1,138,762.85 (per-period rounding, documented).
+- Test counts after M13 (2026-11-14): `dotnet test` 202 unit and 209 integration tests passed; `npm test -- --watch=false` 153 tests in 23 files passed; `dotnet build -warnaserror` 0 warnings; Playwright e2e (1 test, installed Edge) passed against the rebuilt image.
 - Fresh clone (2026-10-12, branch `#0012-e2e-deploy-portfolio`): README steps `cp .env.example .env`, set the two secrets, `docker compose up --build`: healthy in 28 s (Docker layer cache warm on this machine, so not a cold build). README test commands from the clone: `dotnet test` 172 + 190 passed; `npm ci` + `npm test` 135 passed; the e2e commands (`npm ci`, `npx playwright install chromium`, `npx playwright test`) passed with Playwright's Chromium.
 - Secret scan (2026-10-12): `.env` never committed; the local signing key appears in no commit; no private keys or cloud tokens in history; the only email addresses are the fictional `numera.example` and `example.test` ones. The local database password matched two commits only because it is the `change-me` placeholder itself.
 - Seed time, 200,000 rows (local Docker PostgreSQL 17, dev machine, single runs on 2026-10-11): generation 522 ms, binary COPY insert 3,274 ms in the service; about 5.6 s wall-clock for `dotnet run -- seed` including process start and migrate check

@@ -23,7 +23,7 @@ Read `docs/SPEC.md` section 12 and the KPI definitions, order filter and metrics
 6. Dashboard: a "Compare to" choice in the filter bar (None, Previous period, Same period last year), kept in the URL with the other dashboard settings. It is disabled, with a short reason, when the range is "All time" or open-ended.
 7. KPI cards: the change as text and an arrow ("▲ 12.4% vs previous period"), green or red by whether the change is good (a rising refund rate is bad), the comparison value below, and a clear message when there is no comparison value. Colour is never the only signal.
 8. Revenue chart: the comparison series as a dashed, muted line with a legend; the tooltip and the data table show both values. Clicking still opens the current period's rows.
-9. The filter bar shows the comparison dates ("Compared with Jul 3, 2026 to Sep 30, 2026").
+9. The comparison dates are shown with the KPI cards ("Compared with Mar 31, 2026 to Jun 30, 2026 (previous period)."), taken from the API so they are defined in one place.
 
 ## Out of scope
 Comparison on the breakdown charts and explanations of the change (M14). Comparison on the orders grid or in exports.
