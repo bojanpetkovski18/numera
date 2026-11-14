@@ -1,14 +1,21 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { FilterStore } from '../../core/filters/filter.store';
-import { formatCurrency, formatInteger, formatKpiCurrency, formatPercent } from '../../core/format/format';
+import { formatCurrency, formatDate, formatInteger, formatKpiCurrency, formatPercent } from '../../core/format/format';
 import { problemMessage } from '../../core/http/problem';
+import { COMPARISON_NAMES, COMPARISON_TITLES, ChangeView, changeView, compareParams } from './comparison';
 import { MetricsSummary } from './metrics.models';
 
 interface Kpi {
   readonly label: string;
   readonly value: string;
   readonly detail: string;
+  /** Only when the figures were compared with another period. */
+  readonly comparison?: {
+    readonly change: ChangeView | null;
+    /** "Previous period: $9,234,567" */
+    readonly before: string;
+  };
 }
 
 @Component({
@@ -33,12 +40,28 @@ interface Kpi {
       } @else if (empty()) {
         <div class="card state">No data for these filters.</div>
       } @else {
+        @if (comparedWith(); as text) {
+          <p class="compared">{{ text }}</p>
+        }
         <div class="grid">
           @for (kpi of kpis(); track kpi.label) {
             <article class="card kpi">
               <h2 class="label">{{ kpi.label }}</h2>
               <p class="value">{{ kpi.value }}</p>
-              <p class="detail">{{ kpi.detail }}</p>
+              @if (kpi.comparison; as c) {
+                @if (c.change; as change) {
+                  <p class="change" [class.good]="change.tone === 'good'" [class.bad]="change.tone === 'bad'">
+                    <span aria-hidden="true">{{ change.arrow }} {{ change.text }}</span>
+                    <span class="visually-hidden">{{ change.spoken }}</span>
+                    <span class="vs">vs {{ comparisonName() }}</span>
+                  </p>
+                } @else {
+                  <p class="change none">Nothing to compare with</p>
+                }
+                <p class="detail">{{ c.before }}</p>
+              } @else {
+                <p class="detail">{{ kpi.detail }}</p>
+              }
             </article>
           }
         </div>
@@ -72,6 +95,28 @@ interface Kpi {
       color: var(--color-muted);
       font-size: var(--font-size-sm);
     }
+    .compared {
+      margin: 0 0 var(--space-3);
+      color: var(--color-muted);
+      font-size: var(--font-size-sm);
+    }
+    .change {
+      margin: 0 0 var(--space-1);
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      font-variant-numeric: tabular-nums;
+    }
+    .change.good {
+      color: var(--color-success);
+    }
+    .change.bad {
+      color: var(--color-danger);
+    }
+    .change.none,
+    .vs {
+      color: var(--color-muted);
+      font-weight: normal;
+    }
     .line {
       height: 0.9rem;
       margin-bottom: var(--space-3);
@@ -100,28 +145,61 @@ export class KpiCards {
 
   protected readonly summary = httpResource<MetricsSummary>(() => ({
     url: '/api/metrics/summary',
-    params: this.filters.apiParams(),
+    params: { ...this.filters.apiParams(), ...compareParams(this.filters.compareParam()) },
   }));
 
+  private readonly loaded = computed(() => (this.summary.hasValue() ? this.summary.value() : undefined));
+
   protected readonly empty = computed(() => {
-    const s = this.summary.hasValue() ? this.summary.value() : undefined;
+    const s = this.loaded();
     return s !== undefined && s.completedLines + s.refundedLines === 0;
   });
 
+  protected readonly comparisonName = computed(() => {
+    const mode = this.loaded()?.comparison?.mode;
+    return mode ? COMPARISON_NAMES[mode] : '';
+  });
+
+  /** "Compared with Mar 31, 2026 to Jun 30, 2026 (previous period)." The dates come from the API, which defines them. */
+  protected readonly comparedWith = computed(() => {
+    const c = this.loaded()?.comparison;
+    return c ? `Compared with ${formatDate(c.from)} to ${formatDate(c.to)} (${COMPARISON_NAMES[c.mode]}).` : null;
+  });
+
   protected readonly kpis = computed<Kpi[]>(() => {
-    if (!this.summary.hasValue()) {
+    const s = this.loaded();
+    if (!s) {
       return [];
     }
-    const s = this.summary.value();
     const refundBase = s.completedLines + s.refundedLines;
+    const c = s.comparison ?? null;
+    const changes = s.changes ?? null;
+    const title = c ? COMPARISON_TITLES[c.mode] : '';
+    const compared = (change: ChangeView | null, before: string) => (c ? { comparison: { change, before: `${title}: ${before}` } } : {});
     return [
-      { label: 'Revenue', value: formatKpiCurrency(s.revenue), detail: 'Completed orders, after discounts' },
-      { label: 'Orders', value: formatInteger(s.orders), detail: `${formatInteger(s.completedLines)} completed lines` },
-      { label: 'Average order value', value: formatCurrency(s.averageOrderValue), detail: 'Revenue per order' },
+      {
+        label: 'Revenue',
+        value: formatKpiCurrency(s.revenue),
+        detail: 'Completed orders, after discounts',
+        ...compared(changeView(changes?.revenue, 'percent', true), formatKpiCurrency(c?.revenue ?? 0)),
+      },
+      {
+        label: 'Orders',
+        value: formatInteger(s.orders),
+        detail: `${formatInteger(s.completedLines)} completed lines`,
+        ...compared(changeView(changes?.orders, 'percent', true), formatInteger(c?.orders ?? 0)),
+      },
+      {
+        label: 'Average order value',
+        value: formatCurrency(s.averageOrderValue),
+        detail: 'Revenue per order',
+        ...compared(changeView(changes?.averageOrderValue, 'percent', true), formatCurrency(c?.averageOrderValue ?? 0)),
+      },
       {
         label: 'Refund rate',
         value: formatPercent(s.refundRate),
         detail: `${formatInteger(s.refundedLines)} of ${formatInteger(refundBase)} lines refunded`,
+        ...compared(changeView(changes?.refundRateDifference, 'points', false), formatPercent(c?.refundRate ?? 0)),
       },
     ];
   });

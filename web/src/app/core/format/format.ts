@@ -69,3 +69,15 @@ export function formatPeriod(periodStart: string, granularity: Granularity): str
 export function formatDate(value: string): string {
   return parseIsoDate(value).toLocaleDateString(LOCALE, { month: 'short', day: 'numeric', year: 'numeric' });
 }
+const signedPercent = new Intl.NumberFormat(LOCALE, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' });
+const signedPoints = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' });
+
+/** A relative change with its sign: 0.124 becomes +12.4%, -0.05 becomes -5.0%, 0 becomes 0.0%. */
+export function formatSignedPercent(fraction: number): string {
+  return signedPercent.format(fraction);
+}
+
+/** A difference between two rates in percentage points: 0.012 becomes +1.2 pts. */
+export function formatPoints(fraction: number): string {
+  return `${signedPoints.format(fraction * 100)} pts`;
+}

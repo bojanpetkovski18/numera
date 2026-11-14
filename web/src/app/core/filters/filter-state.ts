@@ -1,5 +1,13 @@
 import { Granularity, toIsoDate } from '../format/format';
 
+export type CompareMode = 'none' | 'previous' | 'year';
+
+export const COMPARE_MODES: readonly { readonly value: CompareMode; readonly label: string }[] = [
+  { value: 'none', label: 'No comparison' },
+  { value: 'previous', label: 'Previous period' },
+  { value: 'year', label: 'Same period last year' },
+];
+
 export type DatePreset = 'last30' | 'last90' | 'ytd' | 'all' | 'custom';
 
 export const DATE_PRESETS: readonly { readonly value: DatePreset; readonly label: string }[] = [
@@ -20,6 +28,8 @@ export interface FilterState {
   readonly channels: readonly string[];
   readonly categories: readonly string[];
   readonly granularity: Granularity;
+  /** Dashboard only: what the KPIs and the revenue chart are compared with. Needs a bounded date range. */
+  readonly compare: CompareMode;
 }
 
 export const DEFAULT_FILTER: FilterState = {
@@ -30,6 +40,7 @@ export const DEFAULT_FILTER: FilterState = {
   channels: [],
   categories: [],
   granularity: 'month',
+  compare: 'none',
 };
 
 export interface DateRange {
@@ -66,9 +77,28 @@ export function toApiParams(state: FilterState, today: Date): Record<string, str
   return params;
 }
 
+/**
+ * The `compare` value to send to the metrics API, or null when there is no comparison. The API compares bounded
+ * ranges only, so "All time" and half-open custom ranges have none (the chosen mode is kept for when they do).
+ */
+export function compareParam(state: FilterState, today: Date): 'previous' | 'year' | null {
+  if (state.compare === 'none') {
+    return null;
+  }
+  const { from, to } = resolveRange(state, today);
+  return from && to ? state.compare : null;
+}
+
+/** Why a comparison cannot be chosen for this range, or null when it can. */
+export function compareUnavailableReason(state: FilterState, today: Date): string | null {
+  const { from, to } = resolveRange(state, today);
+  return from && to ? null : 'Choose a date range with a start and an end to compare it.';
+}
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const PRESETS = new Set<DatePreset>(['last30', 'last90', 'ytd', 'all', 'custom']);
 const GRANULARITIES = new Set<Granularity>(['day', 'week', 'month']);
+const COMPARES = new Set<CompareMode>(['previous', 'year']);
 
 /** Minimal read-only view of Angular's ParamMap, so this stays a pure function. */
 export interface QueryParamSource {
@@ -91,6 +121,7 @@ export function fromQueryParams(params: QueryParamSource): FilterState {
       ? presetParam
       : 'all';
   const granularityParam = params.get('granularity') as Granularity | null;
+  const compareValue = params.get('compare') as CompareMode | null;
 
   return {
     preset,
@@ -100,6 +131,7 @@ export function fromQueryParams(params: QueryParamSource): FilterState {
     channels: cleanList(params.getAll('channel')),
     categories: cleanList(params.getAll('category')),
     granularity: granularityParam && GRANULARITIES.has(granularityParam) ? granularityParam : 'month',
+    compare: compareValue && COMPARES.has(compareValue) ? compareValue : 'none',
   };
 }
 
@@ -117,8 +149,12 @@ export function toQueryParams(state: FilterState): Record<string, string | strin
     channel: state.channels.length ? [...state.channels] : null,
     category: state.categories.length ? [...state.categories] : null,
     granularity: state.granularity === 'month' ? null : state.granularity,
+    compare: state.compare === 'none' ? null : state.compare,
   };
 }
+
+/** Query params that remove the dashboard-only settings (granularity, comparison) from another page's URL. */
+export const NO_DASHBOARD_SETTINGS = { granularity: null, compare: null } as const;
 
 export function sameFilter(a: FilterState, b: FilterState): boolean {
   return JSON.stringify(a) === JSON.stringify(b);

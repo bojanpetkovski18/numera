@@ -1,6 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
-import { DATE_PRESETS, DatePreset } from '../../core/filters/filter-state';
+import { COMPARE_MODES, CompareMode, DATE_PRESETS, DatePreset } from '../../core/filters/filter-state';
 import { FilterStore } from '../../core/filters/filter.store';
 import { formatDate } from '../../core/format/format';
 import { FilterOptions } from '../../core/filters/filter-options';
@@ -45,11 +45,29 @@ type ListField = 'regions' | 'channels' | 'categories';
         </div>
       }
 
+      <div class="field">
+        <label for="f-compare">Compare to</label>
+        <!-- Without a bounded range there is nothing to compare: the choice shows "No comparison" and is kept for later. -->
+        <select
+          id="f-compare"
+          (change)="setCompare($event)"
+          [disabled]="filters.compareUnavailable() !== null"
+          [attr.aria-describedby]="filters.compareUnavailable() ? 'f-compare-hint' : null"
+        >
+          @for (m of compareModes; track m.value) {
+            <option [value]="m.value" [selected]="m.value === shownCompare()">{{ m.label }}</option>
+          }
+        </select>
+      </div>
+
       <div class="field actions">
         <button type="button" class="btn" (click)="filters.reset()" [disabled]="filters.isDefault()">Reset filters</button>
       </div>
 
       <p class="range" aria-live="polite">{{ rangeText() }}</p>
+      @if (filters.compareUnavailable(); as reason) {
+        <p class="range" id="f-compare-hint">{{ reason }}</p>
+      }
       @if (options.error()) {
         <p class="range warn" role="status">Filter choices could not be loaded; date filters still work.</p>
       }
@@ -110,6 +128,10 @@ type ListField = 'regions' | 'channels' | 'categories';
 export class FilterBar {
   protected readonly filters = inject(FilterStore);
   protected readonly presets = DATE_PRESETS;
+  protected readonly compareModes = COMPARE_MODES;
+
+  /** The comparison actually in use: "none" while the range cannot be compared, whatever was chosen before. */
+  protected readonly shownCompare = computed<CompareMode>(() => this.filters.compareParam() ?? 'none');
 
   protected readonly listFields: readonly { field: ListField; label: string; all: string }[] = [
     { field: 'regions', label: 'Region', all: 'All regions' },
@@ -159,6 +181,10 @@ export class FilterBar {
   protected setDate(which: 'from' | 'to', event: Event): void {
     const value = (event.target as HTMLInputElement).value || null;
     this.filters.update({ [which]: value });
+  }
+
+  protected setCompare(event: Event): void {
+    this.filters.update({ compare: (event.target as HTMLSelectElement).value as CompareMode });
   }
 
   protected setList(field: ListField, event: Event): void {

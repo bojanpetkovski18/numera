@@ -146,4 +146,42 @@ describe('DashboardPage', () => {
     expect(store.categories()).toEqual([]);
     expect(TestBed.inject(Router).url).toBe('/dashboard');
   });
+
+  it('"Compare to" is disabled with a reason for all time, and a choice reaches the URL, the KPIs and the chart', async () => {
+    await open('/dashboard');
+    flushAll();
+    await settleAll();
+
+    const compare = root().querySelector<HTMLSelectElement>('#f-compare')!;
+    expect(compare.disabled).toBe(true);
+    expect(compare.value).toBe('none');
+    expect(compare.getAttribute('aria-describedby')).toBe('f-compare-hint');
+    expect(root().querySelector('#f-compare-hint')?.textContent).toBe('Choose a date range with a start and an end to compare it.');
+
+    TestBed.inject(FilterStore).update({ preset: 'last90' });
+    await settleAll();
+    flushAll();
+    await settleAll();
+    expect(compare.disabled).toBe(false);
+    expect(root().querySelector('#f-compare-hint')).toBeNull();
+
+    compare.value = 'previous';
+    compare.dispatchEvent(new Event('change'));
+    await settleAll();
+
+    expect(TestBed.inject(Router).url).toContain('compare=previous');
+    expect(pending(http, '/api/metrics/summary')[0].request.params.get('compare')).toBe('previous');
+    expect(pending(http, '/api/metrics/timeseries')[0].request.params.get('compare')).toBe('previous');
+    // The breakdown charts are not compared, so they do not reload.
+    expect(pending(http, '/api/metrics/breakdown')).toEqual([]);
+  });
+
+  it('restores the comparison from the URL', async () => {
+    await open('/dashboard?preset=ytd&compare=year');
+    flushAll();
+    await settleAll();
+
+    expect(TestBed.inject(FilterStore).compare()).toBe('year');
+    expect(root().querySelector<HTMLSelectElement>('#f-compare')!.value).toBe('year');
+  });
 });
