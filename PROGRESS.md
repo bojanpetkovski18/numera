@@ -20,6 +20,17 @@ Session estimates are planning guesses (2-3 hours per session), not measurements
 | M11 | Demo reset, states, responsive polish | 3 | complete locally | 2026-10-12 | Demo reset API and Settings flow; error banner and not-found page; states and wording audit; axe check (no violations after fixes) and keyboard/scroll walk-through at 375, 768 and 1280 px; reset restores the original dashboard numbers in the browser. CI run pending. |
 | M12 | E2E test, Docker, deploy, README, screenshots | 4 | partial | 2026-10-12 | Production image (API serves the Angular app), Docker Compose full stack, Playwright e2e locally against the image, fresh-clone test, secret scan, README, architecture, portfolio kit, Render blueprint. Pending: the live deployment on Render + Neon (needs the owner's accounts) and the CI run of the new e2e job. |
 
+### Version 2 (`docs/SPEC.md` section 12)
+
+| # | Milestone | Est. sessions | Status | Verified on | Notes |
+|---|---|---|---|---|---|
+| M13 | Period comparison | 2 | in progress | - | |
+| M14 | "What changed?" | 2 | not started | - | |
+| M15 | Import column mapping | 3 | not started | - | |
+| M16 | Saved views and share links | 3 | not started | - | |
+| M17 | Ask in plain English (optional) | 3 | waiting for the owner's go | - | Needs an AI API key and a cost limit. |
+| M18 | Release 2.0 | 2 | not started | - | |
+
 Total estimate: about 27 sessions, which is roughly 5-6 weeks at 5 sessions a week. Keep a buffer week.
 
 ## Measured results (fill in only when measured)

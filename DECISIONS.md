@@ -450,4 +450,11 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - The live demo now follows `main` (`render.yaml`, replacing the `dev` branch named in D052), so it changes only when a release is made, not with every merge into `dev`.
 - Versions follow semantic versioning: patch for fixes and docs, minor for new features, major for breaking changes to the API or the data.
 
-_Add new decisions below as D056, D057, ..._
+## D056: Version 2 scope and order
+
+- The owner chose version 2 from a list of fifteen ideas, on the advice to favour features that show up in a demo and that clients ask for: period comparison (M13), "What changed?" (M14), import column mapping (M15), saved views and share links (M16), an optional plain-English question box (M17), and a release milestone (M18). The scope is in `docs/SPEC.md` section 12, with one prompt per milestone in `prompts/`.
+- Order: comparison first, because "What changed?" and the AI answers build on it; column mapping before sharing, because it matters more to clients evaluating the tool with their own data.
+- M17 waits for the owner's confirmation: it needs an API key and a cost limit, and the app must keep working without it.
+- Workspaces and roles, scheduled emails, PDF/Excel export, Excel upload, forecasting and dark mode stay out of version 2: each is large or needs paid services, and none is needed to show the "from numbers to decisions" story.
+
+_Add new decisions below as D057, D058, ..._
