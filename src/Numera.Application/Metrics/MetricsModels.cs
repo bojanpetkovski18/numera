@@ -20,11 +20,36 @@ public sealed record MetricsSummary(
     decimal AverageOrderValue,
     decimal RefundRate,
     int CompletedLines,
+    int RefundedLines,
+    SummaryComparison? Comparison = null,
+    KpiChanges? Changes = null);
+
+/// <summary>The comparison period's dates and its KPIs (same definitions as the current period).</summary>
+public sealed record SummaryComparison(
+    string Mode,
+    DateOnly From,
+    DateOnly To,
+    decimal Revenue,
+    int Orders,
+    decimal AverageOrderValue,
+    decimal RefundRate,
+    int CompletedLines,
     int RefundedLines);
 
-public sealed record TimeseriesPoint(DateOnly PeriodStart, decimal Revenue, int Orders);
+/// <summary>Relative changes as fractions (0.124 = +12.4%); the refund rate change is a difference in percentage points.</summary>
+public sealed record KpiChanges(decimal? Revenue, decimal? Orders, decimal? AverageOrderValue, decimal? RefundRateDifference);
 
-public sealed record RevenueTimeseries(string Granularity, IReadOnlyList<TimeseriesPoint> Points);
+/// <summary>A period; the comparison values are null when no comparison was asked for.</summary>
+public sealed record TimeseriesPoint(
+    DateOnly PeriodStart,
+    decimal Revenue,
+    int Orders,
+    decimal? ComparisonRevenue = null,
+    int? ComparisonOrders = null);
+
+public sealed record ComparisonDates(string Mode, DateOnly From, DateOnly To);
+
+public sealed record RevenueTimeseries(string Granularity, IReadOnlyList<TimeseriesPoint> Points, ComparisonDates? Comparison = null);
 
 public sealed record BreakdownGroup(string Key, decimal Revenue, int Orders);
 
