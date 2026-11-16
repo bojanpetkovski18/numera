@@ -14,20 +14,24 @@ Upwork's limits differ between its help pages (title 40 or 70 characters, descri
 | Skills (pick 5) | Angular, ASP.NET Core, PostgreSQL, Dashboard, Data Visualization (alternatives: C#, .NET, TypeScript, Docker, CSV) | |
 | Project link | The GitHub repository (and the live demo link once it is deployed) | |
 
-**Project description (284 characters):**
+**Project description (286 characters):**
 
-> Web app that turns a sales CSV into a reporting dashboard: validated import with an error report, KPI cards and charts, shared filters, click-through from any chart to the exact rows behind it, and CSV export. Angular 22, ASP.NET Core (.NET 10), PostgreSQL, Docker; tested end to end.
+> Web app that turns a sales CSV into a reporting dashboard: validated import with column mapping, KPIs compared with earlier periods, what-changed breakdowns, drill-down to the exact rows, CSV export, read-only share links and optional plain-English questions. Angular, .NET, PostgreSQL.
 
-**Longer description, if 600 characters are allowed:**
+**Longer description, if 600 characters are allowed (592 characters):**
 
-> Small teams often run their sales reporting from spreadsheets. This web app turns a sales CSV into a reporting dashboard: an import that validates every row and explains each rejected one, KPI cards and charts computed in the database from one set of definitions, filters shared by every screen, one click from any chart to the exact rows behind it, and CSV export of the current view. Built solo with Angular 22, ASP.NET Core on .NET 10 and PostgreSQL; tested from the database to the browser; runs with one Docker command. Fictional demo data; built with AI assistance.
+> Small teams often run their sales reporting from spreadsheets. This web app turns a sales CSV, even a shop export with its own column names, into a reporting dashboard: KPIs compared with the previous period or last year, a plain sentence on what drove each change, one click from any number to the exact rows behind it, CSV export, read-only share links, and optional questions in plain English answered with the app's own figures. Built solo with Angular 22, ASP.NET Core on .NET 10 and PostgreSQL; tested from database to browser; runs with one Docker command. Fictional data; AI-assisted.
+
+The version 1 texts (before comparison, mapping, sharing and questions) are in this file's history at tag `v1.0.0`.
 
 **Images, in this order, with captions:**
 
 1. `docs/screenshots/dashboard.png`: *Dashboard: revenue, orders, average order value and refund rate, revenue over time and by category and region. Every number is computed in the database from one set of definitions.*
-2. `docs/screenshots/orders-drill-down.png`: *Clicking the Blends bar opens the orders grid on exactly those order lines. The chips show why the list is filtered; the view can be sorted, searched and exported to CSV.*
-3. `docs/screenshots/import-result.png`: *Import result: valid rows imported, problem rows skipped with the reason for each, downloadable as an error report. Re-imported rows are recognized and not counted twice.*
-4. `docs/screenshots/dashboard-mobile.png`: *The same dashboard on a phone: filters, KPI cards and charts stack into one column.*
+2. `docs/screenshots/dashboard-compare.png`: *Q3 compared with the previous period: each KPI shows its change, and "What changed?" lists the regions that drove it, largest first. Every row opens the orders behind it.*
+3. `docs/screenshots/orders-drill-down.png`: *Clicking the Blends bar opens the orders grid on exactly those order lines. The chips show why the list is filtered; the view can be sorted, searched and exported to CSV.*
+4. `docs/screenshots/import-mapping.png`: *Importing a shop export with its own column names: Numera suggests which column is which, flags dates that could be read two ways, and can remember the mapping.*
+5. `docs/screenshots/shared-view.png`: *A saved view opened through a share link, without an account: the same figures, read-only, with an expiry date.*
+6. `docs/screenshots/dashboard-mobile.png`: *The same dashboard on a phone: filters, KPI cards and charts stack into one column.*
 
 ## Portfolio title
 
@@ -63,26 +67,39 @@ Solo developer: requirements, architecture, backend, frontend, database, tests, 
 - Drill-down from any chart bar or point, by mouse or keyboard, to exactly the matching order lines
 - CSV export of the current view, streamed from the database, with spreadsheet formula-injection protection
 - Demo data reset with confirmation; loading, empty, error and success states on every screen
-- Accessibility: keyboard navigation, skip link, focus management, axe-checked at three screen widths
+- Accessibility: keyboard navigation, skip link, focus management, axe-checked at three screen widths in the automated end-to-end suite
+
+Version 2 (release `v2.0.0`):
+
+- Period comparison: every KPI against the previous period or the same period last year, with the comparison line on the revenue chart
+- "What changed?": the revenue change split by region, channel or category, with a summary sentence and links to the rows in both periods
+- Column mapping on import: suggested columns, four date formats, percentage discounts, saved mappings per user
+- Saved views and read-only share links with expiry and revocation, served by rate-limited public endpoints that expose figures only
+- Optional questions in plain English: Claude turns a question into a request in a fixed schema, which Numera validates and answers with its own queries
 
 ## Most valuable technical decisions
 
 1. **Numbers that agree everywhere.** KPI definitions live in one place and run as SQL in PostgreSQL, never by loading rows into the app. A drill-down opens the grid on exactly the rows behind a chart value, and an automated test checks for every chart point and bar that the rows add up to the value shown.
 2. **An import pipeline that reports instead of failing.** Rows stream into a staging table with PostgreSQL's binary COPY. Invalid and duplicate rows are recorded with a row number and reason, and the rest are imported in one transaction. Measured: a 100,000-row file in about 4.5 seconds on a development machine.
 3. **An export that matches the screen.** The grid and the export share one query and the export reads from a single database snapshot, so the file holds exactly what the grid shows. It streams without holding the file in server memory (measured with a throttled download). Oversized exports are refused with a clear message rather than truncated.
-4. **One production image, tested end to end.** The same Docker image runs locally, in CI and on the hosted demo, and a Playwright test drives the main flow against it on every push. It caught a production-only Content-Security-Policy problem before release.
+4. **One production image, tested end to end.** The same Docker image runs locally, in CI and on the hosted demo, and Playwright tests drive the version 1 and version 2 flows and an accessibility check against it on every push. It caught a production-only Content-Security-Policy problem before release.
+5. **Explanations from the same numbers.** A comparison is the same query for two date ranges; "What changed?" splits the difference by group. Tests check that the comparison equals the KPIs for those dates asked directly, and that each group's rows add up to its figure.
+6. **AI that cannot make up figures.** The question box asks the model only to fill in a fixed request schema; the API validates it like any other request and answers with the dashboard's own queries, so an answer's numbers are the dashboard's and the request is shown for the user to check. It is off without an API key, with per-user and daily limits when on.
 
 ## Suggested screenshot sequence
 
 1. `docs/screenshots/dashboard.png`: the dashboard with KPIs and charts (lead image)
-2. `docs/screenshots/orders-drill-down.png`: the grid after a drill-down, with filter chips
-3. `docs/screenshots/import-result.png`: an import with rejected rows and the error report button
-4. `docs/screenshots/dashboard-mobile.png`: the dashboard on a phone
-5. `docs/screenshots/login.png`: the sign-in page with the demo account (optional)
+2. `docs/screenshots/dashboard-compare.png`: comparison with the previous period and "What changed?"
+3. `docs/screenshots/orders-drill-down.png`: the grid after a drill-down, with filter chips
+4. `docs/screenshots/import-mapping.png`: the column mapping step for a shop export
+5. `docs/screenshots/shared-view.png`: a saved view opened through a share link
+6. `docs/screenshots/import-result.png`: an import with rejected rows and the error report button
+7. `docs/screenshots/dashboard-mobile.png`: the dashboard on a phone
+8. `docs/screenshots/login.png`: the sign-in page with the demo account (optional)
 
 ## Search keywords
 
-sales dashboard, reporting dashboard, KPI dashboard, CSV import, data import pipeline, data validation, drill-down reports, CSV export, Angular, Angular Signals, NgRx, ASP.NET Core, .NET, C#, Web API, PostgreSQL, EF Core, Chart.js, data visualization, full-stack developer, business intelligence, admin panel, Docker, GitHub Actions, Playwright, Testcontainers, accessibility
+sales dashboard, reporting dashboard, KPI dashboard, period comparison, variance analysis, shareable reports, column mapping, AI assistant, natural language query, Claude API, CSV import, data import pipeline, data validation, drill-down reports, CSV export, Angular, Angular Signals, NgRx, ASP.NET Core, .NET, C#, Web API, PostgreSQL, EF Core, Chart.js, data visualization, full-stack developer, business intelligence, admin panel, Docker, GitHub Actions, Playwright, Testcontainers, accessibility
 
 ## Client services this project supports
 
