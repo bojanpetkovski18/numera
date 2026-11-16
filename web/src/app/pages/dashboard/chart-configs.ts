@@ -28,12 +28,34 @@ function reducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+/**
+ * The revenue line, plus a dashed, muted line for the comparison period when `comparisonTitle` is given (the API then
+ * returns comparison values on every point). Only the current line is filled; both share the click target per period.
+ */
 export function revenueChartConfig(
   points: readonly TimeseriesPoint[],
   granularity: Granularity,
   colors: ChartColors,
+  comparisonTitle: string | null = null,
 ): ChartConfiguration<'line'> {
   const dense = points.length > 60;
+  const comparison: ChartConfiguration<'line'>['data']['datasets'] = comparisonTitle
+    ? [
+        {
+          label: comparisonTitle,
+          data: points.map((p) => p.comparisonRevenue ?? 0),
+          borderColor: colors.text,
+          borderDash: [6, 4],
+          borderWidth: 2,
+          fill: false,
+          tension: 0.25,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointBackgroundColor: colors.text,
+          order: 1, // drawn behind the current line
+        },
+      ]
+    : [];
   return {
     type: 'line',
     data: {
@@ -50,7 +72,9 @@ export function revenueChartConfig(
           pointRadius: dense ? 0 : 3,
           pointHoverRadius: 5,
           pointBackgroundColor: colors.primary,
+          order: 0,
         },
+        ...comparison,
       ],
     },
     options: {
@@ -64,7 +88,9 @@ export function revenueChartConfig(
           callbacks: {
             label: (item) => {
               const point = points[item.dataIndex];
-              return [`Revenue: ${formatCurrency(point.revenue)}`, `Orders: ${formatInteger(point.orders)}`];
+              return item.datasetIndex === 0
+                ? [`Revenue: ${formatCurrency(point.revenue)}`, `Orders: ${formatInteger(point.orders)}`]
+                : `${comparisonTitle}: ${formatCurrency(point.comparisonRevenue ?? 0)}, ${formatInteger(point.comparisonOrders ?? 0)} orders`;
             },
           },
         },
@@ -129,16 +155,20 @@ export function breakdownChartConfig(groups: readonly BreakdownGroup[], colors: 
 }
 
 /** One-sentence text alternative for a chart. */
-export function describeSeries(points: readonly TimeseriesPoint[], granularity: Granularity): string {
+export function describeSeries(points: readonly TimeseriesPoint[], granularity: Granularity, comparisonTitle: string | null = null): string {
   if (points.length === 0) {
     return 'Revenue over time: no data.';
   }
   const total = points.reduce((sum, p) => sum + p.revenue, 0);
   const peak = points.reduce((best, p) => (p.revenue > best.revenue ? p : best), points[0]);
+  const compared = comparisonTitle
+    ? ` Dashed line: ${comparisonTitle.toLowerCase()}, total ${formatCurrency(points.reduce((sum, p) => sum + (p.comparisonRevenue ?? 0), 0))}.`
+    : '';
   return (
     `Revenue by ${granularity} from ${formatPeriod(points[0].periodStart, granularity)} to ` +
     `${formatPeriod(points[points.length - 1].periodStart, granularity)}: ${points.length} periods, ` +
-    `total ${formatCurrency(total)}, highest ${formatCurrency(peak.revenue)} in ${formatPeriod(peak.periodStart, granularity)}.`
+    `total ${formatCurrency(total)}, highest ${formatCurrency(peak.revenue)} in ${formatPeriod(peak.periodStart, granularity)}.` +
+    compared
   );
 }
 

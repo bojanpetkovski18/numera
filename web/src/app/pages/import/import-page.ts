@@ -2,15 +2,17 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FileSaver } from '../../core/http/file-saver';
 import { problemMessageFromBlob } from '../../core/http/problem';
-import { ImportJob } from './import.models';
+import { ColumnMapping } from './column-mapping';
+import { ImportJob, MappingChoice } from './import.models';
 import { ImportStore } from './import.store';
 import { ImportsApi } from './imports-api';
+import { SavedMappings } from './saved-mappings';
 
 type ResultKind = 'success' | 'partial' | 'nothing-imported';
 
 @Component({
   selector: 'app-import-page',
-  imports: [DatePipe, DecimalPipe],
+  imports: [ColumnMapping, DatePipe, DecimalPipe, SavedMappings],
   templateUrl: './import-page.html',
   styleUrl: './import-page.css',
 })
@@ -25,7 +27,8 @@ export class ImportPage implements OnInit {
 
   protected readonly busy = computed(() => {
     const phase = this.store.phase();
-    return phase === 'uploading' || phase === 'processing';
+    // Not while mapping: that step can stay open a while, and choosing another file there simply starts over.
+    return phase === 'previewing' || phase === 'uploading' || phase === 'processing';
   });
 
   protected readonly resultKind = computed<ResultKind | null>(() => {
@@ -41,6 +44,7 @@ export class ImportPage implements OnInit {
 
   ngOnInit(): void {
     this.store.loadHistory();
+    this.store.loadMappings();
   }
 
   protected onFileInput(event: Event): void {
@@ -85,6 +89,10 @@ export class ImportPage implements OnInit {
     });
   }
 
+  protected importMapped(choice: MappingChoice): void {
+    this.store.confirmMapping(choice);
+  }
+
   protected retryHistory(): void {
     this.store.loadHistory();
   }
@@ -94,6 +102,6 @@ export class ImportPage implements OnInit {
       return;
     }
     this.downloadError.set(null);
-    this.store.upload(file);
+    this.store.choose(file);
   }
 }

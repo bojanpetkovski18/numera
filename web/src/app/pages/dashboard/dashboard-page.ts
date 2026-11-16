@@ -1,13 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { FilterStore } from '../../core/filters/filter.store';
 import { syncFiltersWithUrl } from '../../core/filters/sync-filters-with-url';
 import { FilterBar } from '../../shared/filters/filter-bar';
 import { BreakdownChart } from './breakdown-chart';
 import { KpiCards } from './kpi-cards';
 import { RevenueChart } from './revenue-chart';
+import { WhatChanged } from './what-changed';
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [BreakdownChart, FilterBar, KpiCards, RevenueChart],
+  imports: [BreakdownChart, FilterBar, KpiCards, RevenueChart, WhatChanged],
   template: `
     <header class="page-header">
       <h1>Dashboard</h1>
@@ -17,6 +19,9 @@ import { RevenueChart } from './revenue-chart';
     <div class="layout">
       <app-filter-bar />
       <app-kpi-cards />
+      @if (filters.compareParam()) {
+        <app-what-changed />
+      }
       <app-revenue-chart />
       <div class="breakdowns">
         <app-breakdown-chart by="category" title="Revenue by category" />
@@ -40,6 +45,11 @@ import { RevenueChart } from './revenue-chart';
       display: grid;
       gap: var(--space-4);
     }
+    /* Grid items default to min-width: auto, so a wide data table would widen the page instead of scrolling. */
+    .layout > *,
+    .breakdowns > * {
+      min-width: 0;
+    }
     .breakdowns {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -53,6 +63,8 @@ import { RevenueChart } from './revenue-chart';
   `,
 })
 export class DashboardPage {
+  protected readonly filters = inject(FilterStore);
+
   constructor() {
     syncFiltersWithUrl(true);
   }

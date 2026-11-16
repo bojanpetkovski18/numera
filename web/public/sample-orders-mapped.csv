@@ -1,0 +1,6 @@
+Order Number,Date,Customer,Sales Region,Sales Channel,SKU,Category,Qty,Price,Discount %,Order Status,Notes
+SAMPLE-0001,01/03/2025,C-00001,Europe,Online Store,HP-SO-ETH,Single Origin,2,18.50,5,completed,First order
+SAMPLE-0001,01/03/2025,C-00001,Europe,Online Store,HP-AC-MUG,Accessories,1,18.00,0,completed,
+SAMPLE-0002,02/03/2025,C-00002,North America,Mobile App,HP-BL-HAR,Blends,1,14.00,0,refunded,Damaged in transit
+SAMPLE-0003,03/03/2025,C-00003,Asia-Pacific,Marketplace,HP-EQ-GRN,Equipment,1,89.00,10,completed,
+SAMPLE-0004,04/03/2025,C-00004,Latin America,Wholesale,HP-SB-M01,Subscriptions,12,16.00,15,cancelled,"Customer asked to cancel, no charge"

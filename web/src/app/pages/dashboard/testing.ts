@@ -82,3 +82,29 @@ export const GROUPS: BreakdownGroup[] = [
 ];
 
 export const SERVER_ERROR = { status: 500, statusText: 'Server Error' };
+/** The summary compared with the previous period (values from the API's hand-computed comparison test). */
+export const COMPARED_SUMMARY: MetricsSummary = {
+  revenue: 95,
+  orders: 2,
+  averageOrderValue: 47.5,
+  refundRate: 0.25,
+  completedLines: 3,
+  refundedLines: 1,
+  comparison: {
+    mode: 'previous',
+    from: '2025-01-29',
+    to: '2025-02-28',
+    revenue: 90,
+    orders: 2,
+    averageOrderValue: 45,
+    refundRate: 0.3333,
+    completedLines: 2,
+    refundedLines: 1,
+  },
+  changes: { revenue: 0.0556, orders: 0, averageOrderValue: 0.0556, refundRateDifference: -0.0833 },
+};
+
+export const COMPARED_POINTS: TimeseriesPoint[] = [
+  { periodStart: '2025-01-01', revenue: 95, orders: 2, comparisonRevenue: 70, comparisonOrders: 1 },
+  { periodStart: '2025-02-01', revenue: 30, orders: 1, comparisonRevenue: 0, comparisonOrders: 0 },
+];

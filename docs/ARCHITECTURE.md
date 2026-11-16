@@ -48,6 +48,31 @@ flowchart LR
 4. Each rejected row is recorded with its row number, field and reason; `GET /api/imports/{id}/errors.csv` streams the report.
 5. Text that would run as a formula in a spreadsheet is neutralized in every CSV the app writes (`CsvCell`).
 
+### Column mapping (M15)
+
+Files whose column names or formats are not Numera's can be imported with a mapping (`ImportMapping` in `Numera.Application/Imports`).
+
+- **Preview:** `POST /api/imports/preview` takes the same upload as an import, with the same checks, and returns:
+  - the header and at most 20 rows, with cells cut to 200 characters;
+  - `matchesNumeraFormat`;
+  - a suggested mapping, `dateFormatAmbiguous`, and the fields left `unmapped`;
+  - the user's saved mapping for files with the same headers, if any.
+
+  Nothing is stored. Files with more than 100 columns are refused (422).
+- **Mapping:** a source column for each of the 11 fields (each column feeds one field at most), a date format (`yyyy-MM-dd`, `dd/MM/yyyy`, `MM/dd/yyyy` or `dd.MM.yyyy`; day and month may have one digit except in the first), and the discount scale: a fraction (0.10) or a percentage (10 or 10%, at most one decimal, stored as 0.10). It is sent as JSON in the `mapping` form field of `POST /api/imports`. Without it, an import behaves exactly as before.
+- **Same pipeline:** a mapping only changes which column index feeds each field and how dates and discounts are parsed. The two passes, the limits, the duplicate checks, the transaction and the error report are unchanged. Unmapped columns are ignored with a warning. A mapped column missing from the file rejects the file (422).
+- **Error report:** for a mapped file, the `field` column names the source column (for example `Qty`), and row numbers count the file's own rows.
+- **Suggestions** (`MappingSuggester`):
+  - Columns are matched by name, ignoring case, spaces and punctuation, first to the field's own name and then to common synonyms ("Qty", "Order Number", "Date"). Each column is suggested for one field only.
+  - The date format is the first that reads every sample date. It is flagged as ambiguous when another format reads them too (01/03/2025).
+  - Discounts are suggested as percentages when a sample is above 1 or has a % sign.
+- **Saved mappings:** `GET/POST /api/import-mappings`, `PUT/DELETE /api/import-mappings/{id}`.
+  - Stored per user in `import_mappings`: name (unique per user, ignoring case), the mapping as JSON, and the file's headers (cleaned, lower-cased, sorted).
+  - A preview offers the most recently updated saved mapping whose headers equal the file's, in any order.
+  - Another user's mapping is always a 404.
+  - At most 50 per user.
+  - A demo reset deletes them.
+
 ## Security
 
 - Secrets (JWT signing key, database password) come from environment variables; the repository holds placeholders only.
@@ -116,6 +141,47 @@ Timeseries details:
 - At most 1,000 points per request; a longer range returns a 400 asking for a shorter range or larger granularity.
 
 Breakdown details: groups that have only refunded or cancelled lines are listed with zero revenue and zero orders.
+
+## Period comparison
+
+`compare=previous|year` on `GET /api/metrics/summary` and `GET /api/metrics/timeseries` compares the filtered range with an earlier one (`PeriodComparison` in `Numera.Application/Metrics`). Without `compare`, the responses are as above, with `comparison` and `changes` set to null.
+
+Comparison period, for a range of n days from `from` to `to` (both required; otherwise a 400 naming `compare`):
+
+- **Previous period** (`previous`): the n days ending the day before `from`. It is "the same number of days", not "the previous calendar quarter": July to September (92 days) is compared with 31 March to 30 June.
+- **Same period last year** (`year`): `from` and `to` one year earlier. 29 February becomes 28 February.
+- Every other filter (region, channel, category) applies to both periods.
+
+Changes (`changes` in the summary), computed from the reported, rounded values of both periods:
+
+- **Revenue, orders, average order value**: (current - comparison) / comparison, rounded to 4 decimals (`0.124` = +12.4%). Null when the comparison value is 0.
+- **Refund rate** (`refundRateDifference`): current rate - comparison rate, in percentage points as a fraction (`-0.0833` = 8.3 points lower), rounded to 4 decimals. Null when either period has no completed or refunded lines.
+
+The summary's `comparison` object holds the comparison dates and the same KPIs as the current period. Each period is its own query, so they equal the summary for those dates requested directly.
+
+Comparison series (timeseries `comparisonRevenue`, `comparisonOrders` on each point, and `comparison` with the dates):
+
+- Each comparison day is moved forward by the gap between the periods (n days, or one year) and counted in the current period it lands in. So comparison point i always sits next to current point i, and a weekly comparison of a range that does not start on a Monday still covers the same days of the calendar as the current week it is shown with.
+- The moved days fall inside the current range, with one exception: a range starting on 29 February is compared from 28 February, which moves to the day before the range. That day is counted in the first period, so the series still adds up to the comparison revenue.
+- Periods are rounded to the cent separately, so the series total can differ from the summary's comparison revenue by a cent or two, as for the current series.
+
+On the dashboard, "Compare to" in the filter bar sets `compare` (kept in the URL with the granularity; neither is sent to the orders grid or carried into a drill-down). It is disabled, with the reason shown, for "All time" and for custom ranges without both dates. The KPI cards show the change with an arrow, a sign and words for screen readers; green or red depends on whether the change is good (a rising refund rate is bad), so colour is never the only signal. A change that rounds to 0.0 is shown as no change. The revenue chart draws the comparison as a dashed, muted line, listed in a legend and in the data table; clicking a period still opens the current period's rows.
+
+## What changed? (revenue drivers)
+
+`GET /api/metrics/drivers?compare=previous|year&by=region|channel|category`, with the usual filters, explains the revenue change between the current and the comparison period by group (`DriverDefinitions` in `Numera.Application/Metrics`). `compare` and `by` are required, as are `from` and `to`.
+
+- **Current and comparison revenue** per group: completed revenue in each period, the rest of the filter applying to both. One SQL query reads both date ranges at once and sums them separately.
+- **Contribution** = the group's current revenue - its comparison revenue, from the two amounts rounded to the cent (so it is the difference of the two numbers shown). A group present in only one period counts as 0 in the other.
+- **Totals**: `currentRevenue`, `comparisonRevenue` and `change` equal the summary's revenue for each period and their difference; `relativeChange` equals the summary's `changes.revenue`. The contributions of one dimension add up to `change`, give or take a cent per group from rounding.
+- **Share of change** = contribution / change, to 4 decimals; null when the change is 0. It can be above 1 or negative: a group can grow more than the total when others fell.
+- **Order**: largest absolute contribution first, then by name. Groups with no completed revenue in either period are left out.
+
+The dashboard shows a "What changed?" panel below the KPI cards while a comparison is active:
+- A tab for each dimension (WAI-ARIA tabs, arrow keys).
+- A summary sentence built only from the response: the total change, then the group with the largest contribution in the same direction.
+- The top five groups with a diverging bar (increases to the right in green, decreases to the left in red, always with a signed amount), the rest summed as "N others".
+- Each group links to its completed lines in the orders grid for the current period, and a second link opens the same group in the comparison period.
 
 ## CSV export
 

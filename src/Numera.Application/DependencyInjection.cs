@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<GetImportJobHandler>();
         services.AddScoped<GetImportErrorsHandler>();
         services.AddScoped<ListImportJobsHandler>();
+        services.AddScoped<SavedMappingsHandler>();
         return services;
     }
 }

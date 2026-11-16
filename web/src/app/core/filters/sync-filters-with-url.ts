@@ -1,10 +1,11 @@
 import { DestroyRef, effect, inject, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
-import { fromQueryParams, toQueryParams } from './filter-state';
+import { NO_DASHBOARD_SETTINGS, fromQueryParams, toQueryParams } from './filter-state';
 import { FilterStore } from './filter.store';
 
 const SHARED_KEYS = ['preset', 'from', 'to', 'region', 'channel', 'category'] as const;
+const DASHBOARD_KEYS = ['granularity', 'compare'] as const;
 
 /**
  * Keeps the shared filter store and the current page's URL in step. Call from a routed component's constructor.
@@ -18,11 +19,12 @@ const SHARED_KEYS = ['preset', 'from', 'to', 'region', 'channel', 'category'] as
  * paging) pass it as `pageParams` so everything goes out in ONE navigation: two separate "merge" navigations in the
  * same tick are both computed from the old URL, and the second silently restores what the first removed.
  *
- * @param includeGranularity Whether this page owns the chart granularity (the dashboard does, the grid does not).
+ * @param ownsDashboardSettings Whether this page owns the dashboard-only settings, the chart granularity and the
+ *   comparison mode (the dashboard does, the grid does not). Other pages keep them in the store but not in their URL.
  * @param pageParams Extra, page-specific query params (a signal-reading function), written together with the filters.
  */
 export function syncFiltersWithUrl(
-  includeGranularity: boolean,
+  ownsDashboardSettings: boolean,
   pageParams: () => Record<string, string | string[] | null> = () => ({}),
 ): void {
   const route = inject(ActivatedRoute);
@@ -35,19 +37,19 @@ export function syncFiltersWithUrl(
   let first = true;
 
   route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
-    const urlHasFilters = hasFilterParams(params, includeGranularity);
+    const urlHasFilters = hasFilterParams(params, ownsDashboardSettings);
     if (first && !urlHasFilters && !restoringHistory) {
       first = false;
       return; // keep the store; the effect below writes it into the URL
     }
     first = false;
     const fromUrl = fromQueryParams(params);
-    filters.replace(includeGranularity ? fromUrl : { ...fromUrl, granularity: filters.granularity() });
+    filters.replace(ownsDashboardSettings ? fromUrl : { ...fromUrl, granularity: filters.granularity(), compare: filters.compare() });
   });
 
   effect(() => {
     const all = toQueryParams(filters.filter());
-    const queryParams = { ...(includeGranularity ? all : { ...all, granularity: null }), ...pageParams() };
+    const queryParams = { ...(ownsDashboardSettings ? all : { ...all, ...NO_DASHBOARD_SETTINGS }), ...pageParams() };
     untracked(() => {
       // scroll: 'manual' keeps the page where it is: this only records the state of the page being looked at.
       void router.navigate([], { relativeTo: route, queryParams, queryParamsHandling: 'merge', replaceUrl: true, scroll: 'manual' });
@@ -55,6 +57,6 @@ export function syncFiltersWithUrl(
   });
 }
 
-function hasFilterParams(params: ParamMap, includeGranularity: boolean): boolean {
-  return SHARED_KEYS.some((key) => params.has(key)) || (includeGranularity && params.has('granularity'));
+function hasFilterParams(params: ParamMap, ownsDashboardSettings: boolean): boolean {
+  return SHARED_KEYS.some((key) => params.has(key)) || (ownsDashboardSettings && DASHBOARD_KEYS.some((key) => params.has(key)));
 }

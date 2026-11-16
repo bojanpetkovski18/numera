@@ -25,6 +25,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
 {
     private const int MaxRawRowLength = 2_000;
     private const int MaxMessageLength = 500;
+    private const int MaxFieldLength = 60;
 
     private const string CreateStageSql = """
         CREATE TEMP TABLE import_stage (
@@ -62,7 +63,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
             RETURNING s.row_number, s.raw_row
         )
         INSERT INTO import_errors (import_job_id, row_number, field, message, raw_row)
-        SELECT @job_id, row_number, 'order_id', @message, raw_row FROM existing
+        SELECT @job_id, row_number, @field, @message, raw_row FROM existing
         """;
 
     private const string ExistingRowMessage =
@@ -92,7 +93,8 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
 
     private sealed record ErrorRow(int RowNumber, string? Field, string Message, string RawRecord);
 
-    public async Task<ImportResult> HandleAsync(Stream file, string fileName, CancellationToken ct = default)
+    /// <param name="mapping">How the file's columns and values map to Numera's; null for a file in Numera's own format.</param>
+    public async Task<ImportResult> HandleAsync(Stream file, string fileName, ImportMapping? mapping = null, CancellationToken ct = default)
     {
         var job = new ImportJob
         {
@@ -106,7 +108,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
         var total = Stopwatch.StartNew();
         try
         {
-            var scan = await ImportFileScanner.ScanAsync(file, ct: ct);
+            var scan = await ImportFileScanner.ScanAsync(file, mapping, ct: ct);
             var scanMs = total.ElapsedMilliseconds;
             var warnings = scan.Header?.Warnings.ToArray() ?? [];
             if (scan.Rejection is not null)
@@ -115,7 +117,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
             }
 
             file.Position = 0;
-            var summary = await LoadAsync(job, file, warnings, ct);
+            var summary = await LoadAsync(job, file, mapping, warnings, ct);
             logger.LogInformation(
                 "Import {ImportId} finished: {Total} rows, {Imported} imported, {Rejected} rejected " +
                 "in {ElapsedMs} ms (scan {ScanMs} ms, final database steps {DatabaseMs} ms)",
@@ -139,7 +141,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
         return new ImportResult(summary, rejection);
     }
 
-    private async Task<ImportJobSummary> LoadAsync(ImportJob job, Stream file, string[] warnings, CancellationToken ct)
+    private async Task<ImportJobSummary> LoadAsync(ImportJob job, Stream file, ImportMapping? mapping, string[] warnings, CancellationToken ct)
     {
         var today = OrderRowValidator.LatestAllowedDate(clock.GetUtcNow());
         var errors = new List<ErrorRow>();
@@ -166,7 +168,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
             // Valid rows stream straight into the staging table through one COPY; nothing is batched in memory.
             await using (var stage = await connection.BeginBinaryImportAsync(CopyStageSql, ct))
             {
-                await using var reader = await OrderCsvReader.OpenAsync(file);
+                await using var reader = await OrderCsvReader.OpenAsync(file, mapping);
                 await foreach (var record in reader.ReadRecordsAsync(ct))
                 {
                     total++;
@@ -178,11 +180,11 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
                         continue;
                     }
 
-                    var result = OrderRowValidator.Validate(record.Row, today);
+                    var result = OrderRowValidator.Validate(record.Row, today, mapping?.Formats);
                     if (!result.IsValid)
                     {
                         rejected++;
-                        errors.AddRange(result.Errors.Select(e => new ErrorRow(record.RowNumber, e.Field, e.Message, record.RawRecord)));
+                        errors.AddRange(result.Errors.Select(e => new ErrorRow(record.RowNumber, SourceField(e.Field, mapping), e.Message, record.RawRecord)));
                         continue;
                     }
 
@@ -192,7 +194,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
                         rejected++;
                         errors.Add(new ErrorRow(
                             record.RowNumber,
-                            ImportColumns.OrderId,
+                            SourceField(ImportColumns.OrderId, mapping),
                             $"Duplicate order_id and product_sku in this file; first seen on row {firstRow}.",
                             record.RawRecord));
                         continue;
@@ -213,6 +215,7 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
             {
                 rejectExisting.Parameters.AddWithValue("job_id", job.Id);
                 rejectExisting.Parameters.AddWithValue("message", ExistingRowMessage);
+                rejectExisting.Parameters.AddWithValue("field", SourceField(ImportColumns.OrderId, mapping)!);
                 alreadyExisting = await rejectExisting.ExecuteNonQueryAsync(ct);
             }
 
@@ -315,6 +318,10 @@ public sealed class ImportOrdersHandler(NumeraDbContext db, TimeProvider clock, 
                 .SetProperty(j => j.CompletedAt, completedAt),
                 ct);
     }
+
+    /// <summary>The column the error report names: the source column of a mapped file, Numera's field otherwise.</summary>
+    private static string? SourceField(string? field, ImportMapping? mapping) =>
+        field is null || mapping is null ? field : Truncate(mapping.SourceFor(field), MaxFieldLength);
 
     private static string Truncate(string value, int max) => value.Length <= max ? value : value[..max];
 }

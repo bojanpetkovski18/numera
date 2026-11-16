@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ImportOrdersHandler>();
         services.AddScoped<GetMetricsSummaryHandler>();
         services.AddScoped<GetRevenueTimeseriesHandler>();
+        services.AddScoped<GetRevenueDriversHandler>();
         services.AddScoped<GetRevenueBreakdownHandler>();
         services.AddScoped<GetFilterOptionsHandler>();
         services.AddScoped<GetOrdersHandler>();

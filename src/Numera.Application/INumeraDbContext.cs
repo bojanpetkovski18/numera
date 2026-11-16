@@ -13,6 +13,7 @@ public interface INumeraDbContext
     DbSet<ImportJob> ImportJobs { get; }
     DbSet<ImportError> ImportErrors { get; }
     DbSet<User> Users { get; }
+    DbSet<SavedImportMapping> SavedImportMappings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

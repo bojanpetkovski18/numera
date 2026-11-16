@@ -24,6 +24,7 @@ public static class MetricsEndpoints
         group.MapGet("/summary", SummaryAsync);
         group.MapGet("/timeseries", TimeseriesAsync);
         group.MapGet("/breakdown", BreakdownAsync);
+        group.MapGet("/drivers", DriversAsync);
 
         // Shared by the dashboard filter bar and (M08) the orders grid.
         app.MapGet("/api/filter-options", async (GetFilterOptionsHandler handler, CancellationToken ct) =>
@@ -32,19 +33,22 @@ public static class MetricsEndpoints
     }
 
     private static async Task<IResult> SummaryAsync(
-        [AsParameters] MetricsFilterQuery query, GetMetricsSummaryHandler handler, CancellationToken ct)
+        [AsParameters] MetricsFilterQuery query, [FromQuery] string? compare, GetMetricsSummaryHandler handler, CancellationToken ct)
     {
         var (filter, errors) = OrderFilterParser.Parse(query.ToInput(), allowStatus: false);
-        return errors.Count > 0 ? Results.ValidationProblem(errors) : Results.Ok(await handler.HandleAsync(filter, ct));
+        var comparison = PeriodComparison.Parse(compare, filter, errors);
+        return errors.Count > 0 ? Results.ValidationProblem(errors) : Results.Ok(await handler.HandleAsync(filter, comparison, ct));
     }
 
     private static async Task<IResult> TimeseriesAsync(
         [AsParameters] MetricsFilterQuery query,
         [FromQuery] string? granularity,
+        [FromQuery] string? compare,
         GetRevenueTimeseriesHandler handler,
         CancellationToken ct)
     {
         var (filter, errors) = OrderFilterParser.Parse(query.ToInput(), allowStatus: false);
+        var comparison = PeriodComparison.Parse(compare, filter, errors);
         if (!Periods.TryParseGranularity(granularity, out var unit))
         {
             errors["granularity"] = ["granularity must be one of: day, week, month."];
@@ -55,7 +59,7 @@ public static class MetricsEndpoints
             return Results.ValidationProblem(errors);
         }
 
-        var series = await handler.HandleAsync(filter, unit, ct);
+        var series = await handler.HandleAsync(filter, unit, comparison, ct);
         return series is null
             ? Results.ValidationProblem(new Dictionary<string, string[]>
             {
@@ -77,5 +81,29 @@ public static class MetricsEndpoints
         }
 
         return errors.Count > 0 ? Results.ValidationProblem(errors) : Results.Ok(await handler.HandleAsync(filter, dimension, ct));
+    }
+
+    private static async Task<IResult> DriversAsync(
+        [AsParameters] MetricsFilterQuery query,
+        [FromQuery] string? by,
+        [FromQuery] string? compare,
+        GetRevenueDriversHandler handler,
+        CancellationToken ct)
+    {
+        var (filter, errors) = OrderFilterParser.Parse(query.ToInput(), allowStatus: false);
+        var comparison = PeriodComparison.Parse(compare, filter, errors);
+        if (string.IsNullOrWhiteSpace(compare))
+        {
+            errors["compare"] = ["compare is required: previous or year."];
+        }
+
+        if (!Periods.TryParseDimension(by, out var dimension))
+        {
+            errors["by"] = ["by must be one of: category, region, channel."];
+        }
+
+        return errors.Count > 0 || comparison is null
+            ? Results.ValidationProblem(errors)
+            : Results.Ok(await handler.HandleAsync(filter, dimension, comparison, ct));
     }
 }

@@ -12,9 +12,11 @@ public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) 
     public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
     public DbSet<ImportError> ImportErrors => Set<ImportError>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<SavedImportMapping> SavedImportMappings => Set<SavedImportMapping>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<SavedImportMapping>(ConfigureSavedImportMapping);
         // pg_trgm backs the case-insensitive order_id "contains" search in the orders grid.
         modelBuilder.HasPostgresExtension("pg_trgm");
         modelBuilder.Entity<Order>(ConfigureOrder);
@@ -96,6 +98,18 @@ public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) 
         b.Property(u => u.Email).HasMaxLength(254);
         b.Property(u => u.PasswordHash).HasMaxLength(200);
         b.HasIndex(u => u.Email).IsUnique().HasDatabaseName("ux_users_email");
+    }
+
+    private static void ConfigureSavedImportMapping(EntityTypeBuilder<SavedImportMapping> b)
+    {
+        b.ToTable("import_mappings");
+        b.HasKey(m => m.Id);
+        b.Property(m => m.Name).HasMaxLength(80);
+        b.Property(m => m.MappingJson).HasColumnType("text");
+        b.Property(m => m.SourceHeaders).HasColumnType("text[]");
+        // Names are unique per user (case-insensitively, checked by the handler; exact duplicates also by the index).
+        b.HasIndex(m => new { m.UserId, m.Name }).IsUnique().HasDatabaseName("ux_import_mappings_user_id_name");
+        b.HasOne<User>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private static string ToSnakeCase(string name) => PascalBoundary().Replace(name, "_$1").ToLowerInvariant();

@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { FilterStore } from '../../core/filters/filter.store';
 import { BreakdownChart } from './breakdown-chart';
 import { RevenueChart } from './revenue-chart';
-import { GROUPS, POINTS, SERVER_ERROR, clickChartItem, createdCharts, dashboardTestProviders, highlighted, pending, settle } from './testing';
+import { COMPARED_POINTS, GROUPS, POINTS, SERVER_ERROR, clickChartItem, createdCharts, dashboardTestProviders, highlighted, pending, settle } from './testing';
 
 const ROUTES = [{ path: 'orders', children: [] }];
 
@@ -260,5 +260,55 @@ describe('BreakdownChart', () => {
       await settle(fixture);
       expect(TestBed.inject(Router).url).toBe('/');
     });
+  });
+});
+
+describe('RevenueChart with a comparison', () => {
+  let fixture: ComponentFixture<RevenueChart>;
+  let http: HttpTestingController;
+  const el = () => fixture.nativeElement as HTMLElement;
+  const URL = '/api/metrics/timeseries';
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({ imports: [RevenueChart], providers: [...dashboardTestProviders(), provideRouter(ROUTES)] });
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(FilterStore).update({ preset: 'custom', from: '2025-01-01', to: '2025-02-28', compare: 'year' });
+    fixture = TestBed.createComponent(RevenueChart);
+    await settle(fixture);
+    const [request] = pending(http, URL);
+    expect(request.request.params.get('compare')).toBe('year');
+    request.flush({ granularity: 'month', points: COMPARED_POINTS, comparison: { mode: 'year', from: '2024-01-01', to: '2024-02-29' } });
+    await settle(fixture);
+  });
+
+  afterEach(() => http.verify());
+
+  it('draws the comparison as a second, dashed line with a legend and a text alternative', () => {
+    const datasets = createdCharts.at(-1)!.data.datasets;
+    expect(datasets.map((d) => d.label)).toEqual(['Revenue', 'Same period last year']);
+    expect(datasets[1].data).toEqual([70, 0]);
+    expect((datasets[1] as { borderDash?: number[] }).borderDash).toEqual([6, 4]);
+    expect(Array.from(el().querySelectorAll('.legend li')).map((li) => li.textContent?.trim())).toEqual([
+      'Revenue',
+      'Same period last year (dashed)',
+    ]);
+    expect(el().querySelector('canvas')?.getAttribute('aria-label')).toContain('Dashed line: same period last year, total $70.00.');
+  });
+
+  it('adds the comparison to the data table', () => {
+    const header = Array.from(el().querySelectorAll('thead th')).map((th) => th.textContent?.trim());
+    expect(header).toEqual(['Period', 'Revenue', 'Orders', 'Same period last year: revenue', 'Same period last year: orders']);
+    const rows = Array.from(el().querySelectorAll('tbody tr')).map((r) => Array.from(r.children).map((cell) => cell.textContent?.trim()));
+    expect(rows).toEqual([
+      ['Jan 2025', '$95.00', '2', '$70.00', '1'],
+      ['Feb 2025', '$30.00', '1', '$0.00', '0'],
+    ]);
+  });
+
+  it('still opens the current period when a point is clicked', async () => {
+    clickChartItem(0);
+    await settle(fixture);
+
+    expect(TestBed.inject(Router).url).toBe('/orders?from=2025-01-01&to=2025-01-31&status=completed');
   });
 });

@@ -7,6 +7,7 @@ import { Granularity, formatCurrency, formatInteger, formatPeriod } from '../../
 import { problemMessage } from '../../core/http/problem';
 import { ChartCanvas } from '../../shared/chart/chart-canvas';
 import { describeSeries, readChartColors, revenueChartConfig } from './chart-configs';
+import { COMPARISON_TITLES, compareParams } from './comparison';
 import { RevenueTimeseries } from './metrics.models';
 
 @Component({
@@ -47,6 +48,12 @@ import { RevenueTimeseries } from './metrics.models';
       } @else if (empty()) {
         <div class="state">No data for these filters.</div>
       } @else if (series.hasValue()) {
+        @if (comparisonTitle(); as title) {
+          <ul class="legend" aria-label="Lines">
+            <li><span class="swatch current" aria-hidden="true"></span>Revenue</li>
+            <li><span class="swatch compared" aria-hidden="true"></span>{{ title }} (dashed)</li>
+          </ul>
+        }
         <app-chart-canvas
           [config]="config()"
           [label]="description()"
@@ -61,7 +68,15 @@ import { RevenueTimeseries } from './metrics.models';
             <table class="data-table">
               <caption class="visually-hidden">Revenue and orders by {{ series.value().granularity }}</caption>
               <thead>
-                <tr><th scope="col">Period</th><th scope="col">Revenue</th><th scope="col">Orders</th></tr>
+                <tr>
+                  <th scope="col">Period</th>
+                  <th scope="col">Revenue</th>
+                  <th scope="col">Orders</th>
+                  @if (comparisonTitle(); as title) {
+                    <th scope="col">{{ title }}: revenue</th>
+                    <th scope="col">{{ title }}: orders</th>
+                  }
+                </tr>
               </thead>
               <tbody>
                 @for (p of series.value().points; track p.periodStart) {
@@ -69,6 +84,10 @@ import { RevenueTimeseries } from './metrics.models';
                     <th scope="row"><a routerLink="/orders" [queryParams]="drills()[$index]">{{ period(p.periodStart) }}</a></th>
                     <td>{{ money(p.revenue) }}</td>
                     <td>{{ count(p.orders) }}</td>
+                    @if (comparisonTitle()) {
+                      <td>{{ money(p.comparisonRevenue ?? 0) }}</td>
+                      <td>{{ count(p.comparisonOrders ?? 0) }}</td>
+                    }
                   </tr>
                 }
               </tbody>
@@ -107,6 +126,28 @@ import { RevenueTimeseries } from './metrics.models';
       border-color: var(--color-primary);
       color: var(--color-primary-ink);
     }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1) var(--space-4);
+      margin: 0 0 var(--space-2);
+      padding: 0;
+      list-style: none;
+      color: var(--color-muted);
+      font-size: var(--font-size-sm);
+    }
+    .legend li {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .swatch {
+      width: 1.5rem;
+      border-top: 3px solid var(--color-primary);
+    }
+    .swatch.compared {
+      border-top: 2px dashed var(--color-muted);
+    }
     .chart-skeleton {
       height: var(--chart-height, 18rem);
     }
@@ -126,19 +167,27 @@ export class RevenueChart {
 
   protected readonly series = httpResource<RevenueTimeseries>(() => ({
     url: '/api/metrics/timeseries',
-    params: { ...this.filters.apiParams(), granularity: this.filters.granularity() },
+    params: { ...this.filters.apiParams(), granularity: this.filters.granularity(), ...compareParams(this.filters.compareParam()) },
   }));
 
+  /** "Previous period" or "Same period last year" when the loaded series carries a comparison. */
+  protected readonly comparisonTitle = computed(() => {
+    const mode = this.series.hasValue() ? this.series.value().comparison?.mode : undefined;
+    return mode ? COMPARISON_TITLES[mode] : null;
+  });
+
   protected readonly empty = computed(
-    () => this.series.hasValue() && this.series.value().points.every((p) => p.revenue === 0 && p.orders === 0),
+    () =>
+      this.series.hasValue() &&
+      this.series.value().points.every((p) => p.revenue === 0 && p.orders === 0 && !p.comparisonRevenue && !p.comparisonOrders),
   );
 
   protected readonly config = computed(() =>
-    revenueChartConfig(this.series.value()?.points ?? [], this.series.value()?.granularity ?? 'month', this.colors),
+    revenueChartConfig(this.series.value()?.points ?? [], this.series.value()?.granularity ?? 'month', this.colors, this.comparisonTitle()),
   );
 
   protected readonly description = computed(() =>
-    describeSeries(this.series.value()?.points ?? [], this.series.value()?.granularity ?? 'month'),
+    describeSeries(this.series.value()?.points ?? [], this.series.value()?.granularity ?? 'month', this.comparisonTitle()),
   );
 
   /**
@@ -160,9 +209,11 @@ export class RevenueChart {
     if (!series) {
       return [];
     }
-    return series.points.map(
-      (p) => `${formatPeriod(p.periodStart, series.granularity)}: ${formatCurrency(p.revenue)}, ${formatInteger(p.orders)} orders`,
-    );
+    const title = this.comparisonTitle();
+    return series.points.map((p) => {
+      const current = `${formatPeriod(p.periodStart, series.granularity)}: ${formatCurrency(p.revenue)}, ${formatInteger(p.orders)} orders`;
+      return title ? `${current}; ${title.toLowerCase()}: ${formatCurrency(p.comparisonRevenue ?? 0)}` : current;
+    });
   });
 
   /**

@@ -13,6 +13,7 @@
   --color-accent: #c8843a;
   --color-focus: #1d6fd1;
   --color-danger: #b3372c;
+  --color-success: #2e6b3a;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -157,6 +158,12 @@ h3 {
 .btn:disabled:hover,
 .btn[aria-disabled='true']:hover {
   border-color: var(--color-border);
+}
+
+.btn.primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 .btn.danger {
