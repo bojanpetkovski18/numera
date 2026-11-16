@@ -80,6 +80,28 @@ Files whose column names or formats are not Numera's can be imported with a mapp
 - Response headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, and a Content-Security-Policy that allows only same-origin scripts (D053).
 - Only parameterized SQL; sort columns and other identifiers come from fixed lists, never from input.
 - Containers run as non-root users.
+- Every endpoint requires a signed-in user except login, health and the share-link endpoints under `/api/shared/{token}`, where the token is the credential (see below).
+
+## Saved views and share links (M16)
+
+- **Saved views** (`/api/views`: list, create, update or rename, delete; per user, at most 50, names unique per user ignoring case) store the dashboard's settings: date preset or custom dates, regions, channels, categories, granularity and comparison. They use the dashboard's validation rules. Presets stay relative: "Last 90 days" means the 90 days before the day the view is opened. On the dashboard, "Save view" and "Saved views" sit under the page title, and a note says which saved view the screen matches.
+- **Share links** (`POST /api/views/{id}/shares` with `expiresInDays` 1, 7 or 30; `GET /api/shares` lists the active ones; `DELETE /api/shares/{id}` revokes):
+  - The token is 32 random bytes, URL-safe base64 (43 characters). It is returned once, in the response that creates the link (sent with `no-store`).
+  - Only its SHA-256 hash is stored (`share_links.token_hash`, unique index).
+  - At most 10 active links per view. Deleting a view deletes its links.
+- **Public endpoints** (`/api/shared/{token}`, `/summary`, `/timeseries`, `/breakdown`, `/drivers`):
+  - They always use the view's saved filter and comparison, resolved to today's date (UTC). Query parameters cannot widen them: only the chart granularity and the breakdown dimension are read.
+  - They return aggregates only: no endpoint exposes order rows through a token.
+  - A malformed, unknown, revoked or expired token gets the same 404.
+  - Responses carry `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex, nofollow`. They are rate limited per client address (120 requests a minute by default, `RateLimiting:SharedPermitLimit`).
+  - Token checks: the format is checked first, then the hash is looked up, so the token itself is never compared or stored.
+  - Request paths, which hold the token, are not logged: `Microsoft.AspNetCore` logs at Warning.
+- **Shared page** (`/shared/{token}`, outside the signed-in shell):
+  - It reuses the dashboard widgets through `DASHBOARD_SOURCE`, which points them at the shared endpoints and turns drill-down off: no links and no selectable chart points. The data tables still carry every value.
+  - It has its own filter store, so nothing leaks into a signed-in session in the same browser.
+  - The HTML response also carries `no-referrer` and `noindex`.
+  - It has loading, "link no longer works" (404) and retryable error states.
+- A demo reset deletes saved views and their links, like saved import mappings.
 
 ## Deployment
 

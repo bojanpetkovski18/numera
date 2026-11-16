@@ -93,6 +93,23 @@ describe('SharedPage', () => {
     expect(root().textContent).not.toContain('to see its completed order lines');
   });
 
+  it("keeps the visitor's own chart grouping instead of putting the view's back", async () => {
+    await open();
+    http.expectOne(BASE).flush(INFO);
+    await settle(fixture);
+    await settle(fixture);
+    flushWidgets();
+    await settle(fixture);
+
+    Array.from(root().querySelectorAll<HTMLButtonElement>('app-revenue-chart button')).find((b) => b.textContent?.trim() === 'Month')!.click();
+    await settle(fixture);
+    await settle(fixture);
+
+    const store = fixture.debugElement.query(By.directive(SharedPage)).injector.get(FilterStore);
+    expect(store.granularity()).toBe('month');
+    expect(pending(http, `${BASE}/timeseries`).map((r) => r.request.params.get('granularity'))).toEqual(['month']);
+  });
+
   it('says plainly when the link no longer works', async () => {
     await open();
 

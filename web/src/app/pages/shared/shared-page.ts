@@ -1,5 +1,5 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, untracked } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FilterStore } from '../../core/filters/filter.store';
 import { Granularity, formatDate } from '../../core/format/format';
@@ -126,14 +126,15 @@ export class SharedPage {
 
   constructor() {
     // The page's own filter store takes the view's resolved dates, so the widgets show and compare what the
-    // server serves (the shared endpoints apply the saved view themselves, whatever the page sends).
+    // server serves (the shared endpoints apply the saved view themselves, whatever the page sends). Only the loaded
+    // view is tracked: reading the store here would undo the visitor's own changes, such as the chart grouping.
     effect(() => {
       if (!this.info.hasValue()) {
         return;
       }
       const v = this.info.value();
       const bounded = v.from !== null || v.to !== null;
-      this.filters.replace({
+      untracked(() => this.filters.replace({
         preset: bounded ? 'custom' : 'all',
         from: v.from,
         to: v.to,
@@ -142,7 +143,7 @@ export class SharedPage {
         categories: [...v.categories],
         granularity: v.granularity,
         compare: v.comparison?.mode ?? 'none',
-      });
+      }));
     });
   }
 
