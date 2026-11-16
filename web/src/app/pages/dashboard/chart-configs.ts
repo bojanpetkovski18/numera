@@ -179,3 +179,43 @@ export function describeBreakdown(title: string, groups: readonly BreakdownGroup
   const parts = groups.map((g) => `${g.key} ${formatCurrency(g.revenue)}`);
   return `${title}: ${parts.join(', ')}.`;
 }
+/**
+ * A chart for one metric of an answer to a question: a line over time or horizontal bars by group, optionally with a
+ * dashed comparison line. Values are formatted with the metric's own format (revenue or orders).
+ */
+export function answerChartConfig(
+  kind: 'line' | 'bar',
+  labels: readonly string[],
+  values: readonly number[],
+  label: string,
+  format: (value: number) => string,
+  colors: ChartColors,
+  comparison: { readonly label: string; readonly values: readonly number[] } | null = null,
+): ChartConfiguration {
+  const axis = { grid: { color: colors.grid }, border: { display: false }, ticks: { color: colors.text, callback: (v: string | number) => format(Number(v)), maxTicksLimit: 6 } };
+  const plain = { grid: { display: false }, ticks: { color: colors.text, autoSkip: true, maxTicksLimit: 8, maxRotation: 0 } };
+  const datasets: ChartConfiguration['data']['datasets'] = [
+    kind === 'line'
+      ? { type: 'line', label, data: [...values], borderColor: colors.primary, backgroundColor: colors.primarySoft, borderWidth: 2, fill: true, tension: 0.25, pointRadius: values.length > 60 ? 0 : 3 }
+      : { type: 'bar', label, data: [...values], backgroundColor: colors.primary, borderRadius: 4, maxBarThickness: 28 },
+  ];
+  if (comparison && kind === 'line') {
+    datasets.push({ type: 'line', label: comparison.label, data: [...comparison.values], borderColor: colors.text, borderDash: [6, 4], borderWidth: 2, fill: false, tension: 0.25, pointRadius: 0 });
+  }
+  return {
+    type: kind,
+    data: { labels: [...labels], datasets },
+    options: {
+      indexAxis: kind === 'bar' ? 'y' : 'x',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: reducedMotion() ? false : { duration: 300 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => `${item.dataset.label}: ${format(Number(item.raw))}` } },
+      },
+      scales: kind === 'bar' ? { x: { beginAtZero: true, ...axis }, y: plain } : { x: plain, y: { beginAtZero: true, ...axis } },
+    },
+  };
+}
