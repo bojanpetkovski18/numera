@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
+using Numera.Api.Ask;
 using Numera.Api.Auth;
 using Numera.Api.Demo;
 using Numera.Api.Imports;
@@ -112,6 +113,18 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IConfiguration>((lim
                 QueueLimit = 0,
             }));
 
+    // Questions to the AI model cost money: a few per signed-in user per minute (and a daily total in AskDailyBudget).
+    var askPerMinute = configuration.GetValue("Ai:PerUserPerMinute", 5);
+    limiter.AddPolicy(AskEndpoints.RateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.User.FindFirst("sub")?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = askPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+
     // Share links are public: a generous limit per client address stops scraping and token guessing, not readers.
     var sharedPermitLimit = configuration.GetValue("RateLimiting:SharedPermitLimit", 120);
     var sharedWindowSeconds = configuration.GetValue("RateLimiting:SharedWindowSeconds", 60);
@@ -140,6 +153,7 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IConfiguration>((lim
         {
             DemoEndpoints.ResetRateLimitPolicy => "Too many demo resets",
             SharedEndpoints.RateLimitPolicy => "Too many requests",
+            AskEndpoints.RateLimitPolicy => "Too many questions",
             _ => "Too many login attempts",
         };
         await Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: title, detail: retryText)
@@ -196,8 +210,9 @@ if (serveWebApp)
     app.UseWebAppFiles();
 }
 app.UseCors();
-app.UseRateLimiter();
 app.UseAuthentication();
+// After authentication, so a policy can partition by the signed-in user (the question limit does).
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
@@ -210,6 +225,7 @@ app.MapOrderEndpoints();
 app.MapDemoEndpoints();
 app.MapViewEndpoints();
 app.MapSharedEndpoints();
+app.MapAskEndpoints();
 if (serveWebApp)
 {
     app.MapWebAppFallback();
