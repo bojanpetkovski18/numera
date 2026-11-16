@@ -66,3 +66,27 @@ export interface RevenueBreakdown {
   readonly by: 'category' | 'region' | 'channel';
   readonly groups: readonly BreakdownGroup[];
 }
+
+export type DriverDimension = 'region' | 'channel' | 'category';
+
+/** One group's revenue in both periods; contribution = current - comparison. */
+export interface Driver {
+  readonly key: string;
+  readonly currentRevenue: number;
+  readonly comparisonRevenue: number;
+  readonly contribution: number;
+  /** contribution / total change; null when the total change is 0. */
+  readonly shareOfChange: number | null;
+}
+
+export interface RevenueDrivers {
+  readonly by: DriverDimension;
+  readonly comparison: ComparisonDates;
+  readonly currentRevenue: number;
+  readonly comparisonRevenue: number;
+  readonly change: number;
+  /** null when the comparison revenue is 0. */
+  readonly relativeChange: number | null;
+  /** Largest absolute contribution first. */
+  readonly drivers: readonly Driver[];
+}
