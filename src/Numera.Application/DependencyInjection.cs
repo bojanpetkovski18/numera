@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Numera.Application.Auth;
 using Numera.Application.Imports;
+using Numera.Application.Views;
 
 namespace Numera.Application;
 
@@ -14,6 +15,8 @@ public static class DependencyInjection
         services.AddScoped<GetImportErrorsHandler>();
         services.AddScoped<ListImportJobsHandler>();
         services.AddScoped<SavedMappingsHandler>();
+        services.AddScoped<SavedViewsHandler>();
+        services.AddScoped<ShareLinksHandler>();
         return services;
     }
 }

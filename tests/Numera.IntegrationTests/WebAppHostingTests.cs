@@ -71,6 +71,18 @@ public sealed class WebAppHostingTests : IDisposable
     }
 
     [Fact]
+    public async Task The_shared_page_loads_without_signing_in_and_keeps_its_token_out_of_referrers_and_search_engines()
+    {
+        var response = await _factory.CreateClient().GetAsync("/shared/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<app-root>", await response.Content.ReadAsStringAsync());
+        Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
+        Assert.Equal("noindex, nofollow", response.Headers.GetValues("X-Robots-Tag").Single());
+        Assert.False((await _factory.CreateClient().GetAsync("/dashboard")).Headers.Contains("X-Robots-Tag"));
+    }
+
+    [Fact]
     public async Task Unknown_api_paths_stay_json_404_and_never_return_the_app()
     {
         var response = await _factory.CreateClient().GetAsync("/api/no-such-endpoint");
