@@ -18,6 +18,15 @@ internal static class MetricsSql
 
     public const string Orders = "COUNT(DISTINCT order_id) FILTER (WHERE status = 'completed')";
 
+    /// <summary>The column for a dimension; from this fixed switch, never from input.</summary>
+    public static string Column(BreakdownDimension by) => by switch
+    {
+        BreakdownDimension.Category => "product_category",
+        BreakdownDimension.Region => "region",
+        BreakdownDimension.Channel => "channel",
+        _ => throw new ArgumentOutOfRangeException(nameof(by)),
+    };
+
     public static async Task<T> WithConnectionAsync<T>(NumeraDbContext db, Func<NpgsqlConnection, Task<T>> work, CancellationToken ct)
     {
         await db.Database.OpenConnectionAsync(ct);
@@ -251,18 +260,55 @@ public sealed class GetFilterOptionsHandler(NumeraDbContext db)
         }, ct);
 }
 
+public sealed class GetRevenueDriversHandler(NumeraDbContext db)
+{
+    /// <summary>
+    /// Completed revenue per group in the current and the comparison period, in one scan over both date ranges
+    /// (the rest of the filter applies to both), then explained by <see cref="DriverDefinitions"/>.
+    /// </summary>
+    public Task<RevenueDrivers> HandleAsync(OrderFilter filter, BreakdownDimension by, ComparisonPeriod comparison, CancellationToken ct = default) =>
+        MetricsSql.WithConnectionAsync(db, async connection =>
+        {
+            if (filter.From is not { } from || filter.To is not { } to)
+            {
+                throw new ArgumentException("A comparison needs both dates; the endpoint validates this.", nameof(filter));
+            }
+
+            var column = MetricsSql.Column(by);
+            await using var command = connection.CreateCommand();
+            // The dates are handled here, so the shared WHERE clause gets the filter without them.
+            var where = OrderFilterSql.Where(filter with { From = null, To = null }, command);
+            const string lineRevenue = "quantity * unit_price * (1 - discount)";
+            command.CommandText = $"""
+                SELECT {column} AS key,
+                       COALESCE(SUM({lineRevenue}) FILTER (WHERE status = 'completed' AND order_date BETWEEN @d_from AND @d_to), 0) AS current,
+                       COALESCE(SUM({lineRevenue}) FILTER (WHERE status = 'completed' AND order_date BETWEEN @d_cfrom AND @d_cto), 0) AS comparison
+                FROM orders
+                {where} AND (order_date BETWEEN @d_from AND @d_to OR order_date BETWEEN @d_cfrom AND @d_cto)
+                GROUP BY {column}
+                """;
+            command.Parameters.Add(new NpgsqlParameter("d_from", NpgsqlDbType.Date) { Value = from });
+            command.Parameters.Add(new NpgsqlParameter("d_to", NpgsqlDbType.Date) { Value = to });
+            command.Parameters.Add(new NpgsqlParameter("d_cfrom", NpgsqlDbType.Date) { Value = comparison.From });
+            command.Parameters.Add(new NpgsqlParameter("d_cto", NpgsqlDbType.Date) { Value = comparison.To });
+
+            var groups = new List<GroupRevenue>();
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                groups.Add(new GroupRevenue(reader.GetString(0), reader.GetDecimal(1), reader.GetDecimal(2)));
+            }
+
+            return DriverDefinitions.Explain(by.ToString().ToLowerInvariant(), comparison, groups);
+        }, ct);
+}
+
 public sealed class GetRevenueBreakdownHandler(NumeraDbContext db)
 {
     public Task<RevenueBreakdown> HandleAsync(OrderFilter filter, BreakdownDimension by, CancellationToken ct = default) =>
         MetricsSql.WithConnectionAsync(db, async connection =>
         {
-            var column = by switch
-            {
-                BreakdownDimension.Category => "product_category",
-                BreakdownDimension.Region => "region",
-                BreakdownDimension.Channel => "channel",
-                _ => throw new ArgumentOutOfRangeException(nameof(by)),
-            };
+            var column = MetricsSql.Column(by);
 
             await using var command = connection.CreateCommand();
             var where = OrderFilterSql.Where(filter, command);

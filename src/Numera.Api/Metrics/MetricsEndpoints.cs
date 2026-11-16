@@ -24,6 +24,7 @@ public static class MetricsEndpoints
         group.MapGet("/summary", SummaryAsync);
         group.MapGet("/timeseries", TimeseriesAsync);
         group.MapGet("/breakdown", BreakdownAsync);
+        group.MapGet("/drivers", DriversAsync);
 
         // Shared by the dashboard filter bar and (M08) the orders grid.
         app.MapGet("/api/filter-options", async (GetFilterOptionsHandler handler, CancellationToken ct) =>
@@ -80,5 +81,29 @@ public static class MetricsEndpoints
         }
 
         return errors.Count > 0 ? Results.ValidationProblem(errors) : Results.Ok(await handler.HandleAsync(filter, dimension, ct));
+    }
+
+    private static async Task<IResult> DriversAsync(
+        [AsParameters] MetricsFilterQuery query,
+        [FromQuery] string? by,
+        [FromQuery] string? compare,
+        GetRevenueDriversHandler handler,
+        CancellationToken ct)
+    {
+        var (filter, errors) = OrderFilterParser.Parse(query.ToInput(), allowStatus: false);
+        var comparison = PeriodComparison.Parse(compare, filter, errors);
+        if (string.IsNullOrWhiteSpace(compare))
+        {
+            errors["compare"] = ["compare is required: previous or year."];
+        }
+
+        if (!Periods.TryParseDimension(by, out var dimension))
+        {
+            errors["by"] = ["by must be one of: category, region, channel."];
+        }
+
+        return errors.Count > 0 || comparison is null
+            ? Results.ValidationProblem(errors)
+            : Results.Ok(await handler.HandleAsync(filter, dimension, comparison, ct));
     }
 }
