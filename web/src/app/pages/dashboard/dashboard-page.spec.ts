@@ -42,6 +42,17 @@ describe('DashboardPage', () => {
     for (const r of pending(http, '/api/metrics/summary')) r.flush(SUMMARY);
     for (const r of pending(http, '/api/metrics/timeseries')) r.flush({ granularity: r.request.params.get('granularity'), points: POINTS });
     for (const r of pending(http, '/api/metrics/breakdown')) r.flush({ by: r.request.params.get('by'), groups: GROUPS });
+    for (const r of pending(http, '/api/metrics/drivers')) {
+      r.flush({
+        by: r.request.params.get('by'),
+        comparison: { mode: r.request.params.get('compare'), from: '2026-04-14', to: '2026-07-13' },
+        currentRevenue: 0,
+        comparisonRevenue: 0,
+        change: 0,
+        relativeChange: null,
+        drivers: [],
+      });
+    }
   }
 
   afterEach(() => {
@@ -183,5 +194,23 @@ describe('DashboardPage', () => {
 
     expect(TestBed.inject(FilterStore).compare()).toBe('year');
     expect(root().querySelector<HTMLSelectElement>('#f-compare')!.value).toBe('year');
+  });
+
+  it('shows "What changed?" only while a comparison is active', async () => {
+    await open('/dashboard?preset=ytd');
+    flushAll();
+    await settleAll();
+    expect(root().querySelector('app-what-changed')).toBeNull();
+
+    TestBed.inject(FilterStore).update({ compare: 'previous' });
+    await settleAll();
+    expect(root().querySelector('app-what-changed')).not.toBeNull();
+    expect(pending(http, '/api/metrics/drivers').map((r) => r.request.params.get('by'))).toEqual(['region']);
+    flushAll(); // answer the compared summary and chart before the next change cancels them
+    await settleAll();
+
+    TestBed.inject(FilterStore).update({ preset: 'all' }); // no longer comparable: the panel goes
+    await settleAll();
+    expect(root().querySelector('app-what-changed')).toBeNull();
   });
 });
