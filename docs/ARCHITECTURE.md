@@ -48,6 +48,31 @@ flowchart LR
 4. Each rejected row is recorded with its row number, field and reason; `GET /api/imports/{id}/errors.csv` streams the report.
 5. Text that would run as a formula in a spreadsheet is neutralized in every CSV the app writes (`CsvCell`).
 
+### Column mapping (M15)
+
+Files whose column names or formats are not Numera's can be imported with a mapping (`ImportMapping` in `Numera.Application/Imports`).
+
+- **Preview:** `POST /api/imports/preview` takes the same upload as an import, with the same checks, and returns:
+  - the header and at most 20 rows, with cells cut to 200 characters;
+  - `matchesNumeraFormat`;
+  - a suggested mapping, `dateFormatAmbiguous`, and the fields left `unmapped`;
+  - the user's saved mapping for files with the same headers, if any.
+
+  Nothing is stored. Files with more than 100 columns are refused (422).
+- **Mapping:** a source column for each of the 11 fields (each column feeds one field at most), a date format (`yyyy-MM-dd`, `dd/MM/yyyy`, `MM/dd/yyyy` or `dd.MM.yyyy`; day and month may have one digit except in the first), and the discount scale: a fraction (0.10) or a percentage (10 or 10%, at most one decimal, stored as 0.10). It is sent as JSON in the `mapping` form field of `POST /api/imports`. Without it, an import behaves exactly as before.
+- **Same pipeline:** a mapping only changes which column index feeds each field and how dates and discounts are parsed. The two passes, the limits, the duplicate checks, the transaction and the error report are unchanged. Unmapped columns are ignored with a warning. A mapped column missing from the file rejects the file (422).
+- **Error report:** for a mapped file, the `field` column names the source column (for example `Qty`), and row numbers count the file's own rows.
+- **Suggestions** (`MappingSuggester`):
+  - Columns are matched by name, ignoring case, spaces and punctuation, first to the field's own name and then to common synonyms ("Qty", "Order Number", "Date"). Each column is suggested for one field only.
+  - The date format is the first that reads every sample date. It is flagged as ambiguous when another format reads them too (01/03/2025).
+  - Discounts are suggested as percentages when a sample is above 1 or has a % sign.
+- **Saved mappings:** `GET/POST /api/import-mappings`, `PUT/DELETE /api/import-mappings/{id}`.
+  - Stored per user in `import_mappings`: name (unique per user, ignoring case), the mapping as JSON, and the file's headers (cleaned, lower-cased, sorted).
+  - A preview offers the most recently updated saved mapping whose headers equal the file's, in any order.
+  - Another user's mapping is always a 404.
+  - At most 50 per user.
+  - A demo reset deletes them.
+
 ## Security
 
 - Secrets (JWT signing key, database password) come from environment variables; the repository holds placeholders only.

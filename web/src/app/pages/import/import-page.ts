@@ -27,7 +27,8 @@ export class ImportPage implements OnInit {
 
   protected readonly busy = computed(() => {
     const phase = this.store.phase();
-    return phase === 'previewing' || phase === 'mapping' || phase === 'uploading' || phase === 'processing';
+    // Not while mapping: that step can stay open a while, and choosing another file there simply starts over.
+    return phase === 'previewing' || phase === 'uploading' || phase === 'processing';
   });
 
   protected readonly resultKind = computed<ResultKind | null>(() => {

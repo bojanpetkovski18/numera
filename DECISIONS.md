@@ -479,4 +479,17 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - **The selected tab is not in the URL**: it is a view on the same data, not part of the filter, so Back to the dashboard shows the Region tab again. It can be added to the URL if users ask for it.
 - `compare` is required on this endpoint (a 400 without it), unlike the summary, where it is optional.
 
-_Add new decisions below as D059, D060, ..._
+## D059: Column mapping on import
+
+- **The mapping changes the input, not the pipeline.** A mapping only decides which column feeds each field and how dates and discounts are read. The scan pass, the streaming `COPY`, the duplicate checks, the transaction and the limits are the version 1 code, so a mapped import is as fast and as safe as a plain one (measured within 0.3 s for 100,000 rows).
+- **The client sends the mapping with every import**; the server never imports by "the saved mapping with id X". A saved mapping only pre-fills the form, so what is imported is always what the user saw and confirmed, and a mapping changed or deleted in between cannot surprise anyone.
+- **A preview reads at most 20 rows** and stores nothing. It costs one extra upload of the file, which is simpler and safer than keeping uploaded files on the server between the two steps. At 10 MB the second upload takes about a second locally.
+- **Four date formats, chosen explicitly.** "Guess per row" would turn 01/03/2025 into different dates in the same file. The suggestion is the first format that reads every sample, flagged as ambiguous when another also does, and the user confirms it. The ISO format stays strict (two-digit day and month), as in version 1.
+- **Percent discounts** accept "10" and "10%", with at most one decimal (Numera stores three decimals of a fraction).
+- **Suggestions are a small synonym list**, not fuzzy matching: predictable, easy to test, and the user can always correct them. A column is suggested for one field only.
+- **Saved mappings are matched by the set of headers**, in any order and letter case. The most recently updated one wins.
+- **Mappings are per user** in the data model, although the demo has a single shared demo user. Another user's mapping is a 404, not a 403. A demo reset deletes them, so a reset shows the import screen as a first visitor sees it.
+- **Status values are not mapped** (for example "Paid" to completed): that would need a value-mapping step, kept out of version 2.
+- **The drop zone stays usable during the mapping step**: dimming it for that long failed the contrast check, and choosing another file there simply starts over.
+
+_Add new decisions below as D060, D061, ..._

@@ -1,4 +1,4 @@
-import { Component, ElementRef, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { Component, ElementRef, Injector, afterNextRender, computed, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { DATE_FORMATS, DateFormat, DiscountScale, IMPORT_FIELDS, ImportMapping, ImportPreview, MappingChoice } from './import.models';
 
 const DATE_EXAMPLES: Readonly<Record<DateFormat, string>> = {
@@ -178,6 +178,7 @@ const MAX_NAME_LENGTH = 80;
 })
 export class ColumnMapping {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   readonly preview = input.required<ImportPreview>();
   readonly fileName = input.required<string>();
@@ -278,8 +279,8 @@ export class ColumnMapping {
     event.preventDefault();
     this.attempted.set(true);
     if (this.problemCount() > 0) {
-      // Move to the first choice that needs attention.
-      queueMicrotask(() => this.host.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+      // Move to the first choice that needs attention, once the problems are on screen.
+      afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), { injector: this.injector });
       return;
     }
     const mapping: ImportMapping = { columns: this.columns(), dateFormat: this.dateFormat(), discount: this.discount() };
