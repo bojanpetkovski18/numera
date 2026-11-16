@@ -34,25 +34,45 @@ internal static class MetricsSql
 
 public sealed class GetMetricsSummaryHandler(NumeraDbContext db)
 {
-    public Task<MetricsSummary> HandleAsync(OrderFilter filter, CancellationToken ct = default) =>
+    /// <summary>
+    /// The KPIs for the filter and, with a comparison, the same KPIs for the comparison dates (the rest of the
+    /// filter unchanged) and the changes between them. Each period is its own query, so the comparison values are
+    /// exactly what the summary returns when asked for those dates directly.
+    /// </summary>
+    public Task<MetricsSummary> HandleAsync(OrderFilter filter, ComparisonPeriod? comparison = null, CancellationToken ct = default) =>
         MetricsSql.WithConnectionAsync(db, async connection =>
         {
-            await using var command = connection.CreateCommand();
-            var where = OrderFilterSql.Where(filter, command);
-            command.CommandText = $"""
-                SELECT {MetricsSql.Revenue} AS revenue,
-                       {MetricsSql.Orders} AS orders,
-                       COUNT(*) FILTER (WHERE status = 'completed') AS completed_lines,
-                       COUNT(*) FILTER (WHERE status = 'refunded') AS refunded_lines
-                FROM orders
-                {where}
-                """;
-            await using var reader = await command.ExecuteReaderAsync(ct);
-            await reader.ReadAsync(ct);
-            var kpis = MetricDefinitions.FromTotals(
-                reader.GetDecimal(0), (int)reader.GetInt64(1), (int)reader.GetInt64(2), (int)reader.GetInt64(3));
-            return new MetricsSummary(kpis.Revenue, kpis.Orders, kpis.AverageOrderValue, kpis.RefundRate, kpis.CompletedLines, kpis.RefundedLines);
+            var kpis = await KpisAsync(connection, filter, ct);
+            if (comparison is null)
+            {
+                return new MetricsSummary(kpis.Revenue, kpis.Orders, kpis.AverageOrderValue, kpis.RefundRate, kpis.CompletedLines, kpis.RefundedLines);
+            }
+
+            var before = await KpisAsync(connection, filter with { From = comparison.From, To = comparison.To }, ct);
+            return new MetricsSummary(
+                kpis.Revenue, kpis.Orders, kpis.AverageOrderValue, kpis.RefundRate, kpis.CompletedLines, kpis.RefundedLines,
+                new SummaryComparison(comparison.Name, comparison.From, comparison.To,
+                    before.Revenue, before.Orders, before.AverageOrderValue, before.RefundRate, before.CompletedLines, before.RefundedLines),
+                MetricDefinitions.Changes(kpis, before));
         }, ct);
+
+    private static async Task<KpiValues> KpisAsync(NpgsqlConnection connection, OrderFilter filter, CancellationToken ct)
+    {
+        await using var command = connection.CreateCommand();
+        var where = OrderFilterSql.Where(filter, command);
+        command.CommandText = $"""
+            SELECT {MetricsSql.Revenue} AS revenue,
+                   {MetricsSql.Orders} AS orders,
+                   COUNT(*) FILTER (WHERE status = 'completed') AS completed_lines,
+                   COUNT(*) FILTER (WHERE status = 'refunded') AS refunded_lines
+            FROM orders
+            {where}
+            """;
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        await reader.ReadAsync(ct);
+        return MetricDefinitions.FromTotals(
+            reader.GetDecimal(0), (int)reader.GetInt64(1), (int)reader.GetInt64(2), (int)reader.GetInt64(3));
+    }
 }
 
 public sealed class GetRevenueTimeseriesHandler(NumeraDbContext db)
@@ -61,8 +81,11 @@ public sealed class GetRevenueTimeseriesHandler(NumeraDbContext db)
     /// Revenue and orders per period, with every period between the bounds present (zero when empty).
     /// Bounds are the filter's dates, or the first and last order date matching the filter when not given.
     /// Returns null when the requested range would exceed <see cref="Periods.MaxPoints"/>.
+    /// With a comparison (which implies explicit bounds), every point also carries the comparison period's values
+    /// for the days that line up with it.
     /// </summary>
-    public Task<RevenueTimeseries?> HandleAsync(OrderFilter filter, Granularity granularity, CancellationToken ct = default) =>
+    public Task<RevenueTimeseries?> HandleAsync(
+        OrderFilter filter, Granularity granularity, ComparisonPeriod? comparison = null, CancellationToken ct = default) =>
         MetricsSql.WithConnectionAsync(db, async connection =>
         {
             var (from, to) = (filter.From, filter.To);
@@ -125,8 +148,56 @@ public sealed class GetRevenueTimeseriesHandler(NumeraDbContext db)
                     (int)reader.GetInt64(2)));
             }
 
-            return new RevenueTimeseries(unit, points);
+            if (comparison is null)
+            {
+                return new RevenueTimeseries(unit, points);
+            }
+
+            await reader.DisposeAsync();
+            var before = await ShiftedTotalsAsync(connection, filter with { From = comparison.From, To = comparison.To }, unit, comparison, from.Value, ct);
+            var withComparison = points
+                .Select(p => before.TryGetValue(p.PeriodStart, out var c)
+                    ? p with { ComparisonRevenue = c.Revenue, ComparisonOrders = c.Orders }
+                    : p with { ComparisonRevenue = 0m, ComparisonOrders = 0 })
+                .ToList();
+            return new RevenueTimeseries(unit, withComparison, new ComparisonDates(comparison.Name, comparison.From, comparison.To));
         }, ct);
+
+    /// <summary>
+    /// The comparison period's revenue and orders, each day moved forward by the comparison's shift and grouped into
+    /// the current period it lands in. The shifted days fall inside the current range, so every key is one of its periods.
+    /// One exception: when the range starts on 29 February, the comparison starts on 28 February, which moves to the
+    /// day before <paramref name="currentFrom"/>; it is counted in the first period, so no comparison revenue is lost.
+    /// </summary>
+    private static async Task<Dictionary<DateOnly, (decimal Revenue, int Orders)>> ShiftedTotalsAsync(
+        NpgsqlConnection connection, OrderFilter comparisonFilter, string unit, ComparisonPeriod comparison, DateOnly currentFrom,
+        CancellationToken ct)
+    {
+        await using var command = connection.CreateCommand();
+        var where = OrderFilterSql.Where(comparisonFilter, command);
+        // An order's lines share its date, so counting distinct order IDs per shifted period stays correct.
+        command.CommandText = $"""
+            SELECT date_trunc('{unit}', GREATEST(order_date::timestamp + make_interval(years => @c_years, days => @c_days),
+                                                 @c_floor::timestamp))::date AS period_start,
+                   {MetricsSql.Revenue} AS revenue,
+                   {MetricsSql.Orders} AS orders
+            FROM orders
+            {where}
+            GROUP BY 1
+            """;
+        command.Parameters.Add(new NpgsqlParameter("c_years", NpgsqlDbType.Integer) { Value = comparison.ShiftYears });
+        command.Parameters.Add(new NpgsqlParameter("c_days", NpgsqlDbType.Integer) { Value = comparison.ShiftDays });
+        command.Parameters.Add(new NpgsqlParameter("c_floor", NpgsqlDbType.Date) { Value = currentFrom });
+
+        var totals = new Dictionary<DateOnly, (decimal, int)>();
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            totals[reader.GetFieldValue<DateOnly>(0)] = (MetricDefinitions.RoundMoney(reader.GetDecimal(1)), (int)reader.GetInt64(2));
+        }
+
+        return totals;
+    }
 
     private static string Name(Granularity granularity) => granularity.ToString().ToLowerInvariant();
 

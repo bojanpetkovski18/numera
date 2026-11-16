@@ -26,7 +26,7 @@ Small and mid-sized teams keep their sales and operations data in spreadsheets. 
 8. Responsive layout (desktop, tablet, mobile).
 9. Demo mode: one-click reset of seeded data.
 
-**Out of MVP (V2):** saved filter views, comparison periods, scheduled email reports, PDF export, multi-user roles.
+**Out of MVP:** saved filter views, comparison periods, scheduled email reports, PDF export, multi-user roles. Version 2 takes some of these on: see section 12.
 
 ## 4. Validation rules (import)
 
@@ -109,3 +109,30 @@ Add a seventh week as a buffer. This plan is tight; if you fall behind, cut expo
 - Screenshots of the dashboard, grid and import result.
 - A DECISIONS.md covering key trade-offs.
 - Fictional data only, with no employer code or rules.
+
+## 12. Version 2: from dashboard to decisions
+
+Version 1 (released as `v1.0.0`) shows what happened. Version 2 helps explain why, and makes Numera work with a client's own files. It is released as `v2.0.0` once M13 to M18 are complete. Every v1 rule (`CLAUDE.md` and sections 4 to 9 above) still applies.
+
+### Scope, in delivery order
+
+| # | Milestone | What the user gets |
+|---|---|---|
+| M13 | Period comparison | KPI cards show the change against the previous period or the same period last year; the revenue chart shows the comparison period as a second line. |
+| M14 | "What changed?" | For a compared range, the regions, channels and categories that drove the revenue change, largest first, each opening its rows. |
+| M15 | Import column mapping | Upload a CSV whose headers do not match Numera's: preview it, map the columns (with suggestions), and save the mapping for next time. |
+| M16 | Saved views and share links | Named filter views per user, and a read-only dashboard link with an expiry date that works without signing in and can be revoked. |
+| M17 | Ask in plain English (optional) | A question box that turns a question into Numera's own metrics and filters and shows the answer as a chart. Starts only after the owner confirms it, because it needs an AI API key and a cost limit. |
+| M18 | Release 2.0 | End-to-end test extended, screenshots, README, demo video, release `v2.0.0`. |
+
+### Rules for version 2
+
+- **Comparison periods.** A comparison needs a bounded date range (both `from` and `to`). "Previous period" is the same number of days immediately before `from`. "Same period last year" is the same dates one year earlier (29 February maps to 28 February).
+- **Changes are explained, not guessed.** Every change shown (a percentage, a driver) is computed in SQL from the same definitions as the KPIs and, where it is a revenue figure, opens the rows behind it, as in v1.
+- **Shared links show aggregates only.** A share link shows the dashboard for its saved filter. It does not open order rows, imports, settings or other filters.
+- **AI never writes SQL.** The question box may only choose from Numera's existing metrics, dimensions and filters. Numera validates that choice like any other request. The answer always shows the filters it used, so a person can check it.
+- **No new paid services are required to run Numera.** The AI feature is off unless a key is configured, and the app works fully without it.
+
+### Out of version 2
+
+Workspaces, users and roles; scheduled emails; PDF and Excel exports; Excel upload; forecasting; dark mode. They remain candidates for a later version.

@@ -85,4 +85,16 @@ describe('syncFiltersWithUrl', () => {
     expect(TestBed.inject(FilterStore).regions()).toEqual([]);
     fixture.destroy();
   });
+
+  it('keeps the dashboard settings in the store but out of the URL of another page', async () => {
+    TestBed.inject(FilterStore).update({ preset: 'last90', granularity: 'week', compare: 'year' });
+
+    await TestBed.inject(Router).navigateByUrl('/p?compare=previous&granularity=day');
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe('/p?preset=last90');
+    expect(TestBed.inject(FilterStore).compare()).toBe('year');
+    expect(TestBed.inject(FilterStore).granularity()).toBe('week');
+    fixture.destroy();
+  });
 });

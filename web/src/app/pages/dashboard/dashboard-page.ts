@@ -40,6 +40,11 @@ import { RevenueChart } from './revenue-chart';
       display: grid;
       gap: var(--space-4);
     }
+    /* Grid items default to min-width: auto, so a wide data table would widen the page instead of scrolling. */
+    .layout > *,
+    .breakdowns > * {
+      min-width: 0;
+    }
     .breakdowns {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));

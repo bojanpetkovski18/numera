@@ -39,6 +39,22 @@ public static class MetricDefinitions
         completedLines,
         refundedLines);
 
+    /// <summary>(current - comparison) / comparison, rounded to 4 decimals; null when the comparison value is 0.</summary>
+    public static decimal? RelativeChange(decimal current, decimal comparison) =>
+        comparison == 0m ? null : decimal.Round((current - comparison) / comparison, 4, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Changes between two periods' reported KPIs. The refund rate change is a difference in percentage points
+    /// (a fraction), null when either period has no completed or refunded lines.
+    /// </summary>
+    public static KpiChanges Changes(KpiValues current, KpiValues comparison) => new(
+        RelativeChange(current.Revenue, comparison.Revenue),
+        RelativeChange(current.Orders, comparison.Orders),
+        RelativeChange(current.AverageOrderValue, comparison.AverageOrderValue),
+        current.CompletedLines + current.RefundedLines == 0 || comparison.CompletedLines + comparison.RefundedLines == 0
+            ? null
+            : current.RefundRate - comparison.RefundRate);
+
     /// <summary>Reference implementation over in-memory lines (tests and documentation).</summary>
     public static KpiValues Summarize(IEnumerable<MetricLine> lines)
     {

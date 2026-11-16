@@ -1,6 +1,6 @@
 import { InjectionToken, computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
-import { DEFAULT_FILTER, FilterState, resolveRange, sameFilter, toApiParams } from './filter-state';
+import { DEFAULT_FILTER, FilterState, compareParam, compareUnavailableReason, resolveRange, sameFilter, toApiParams } from './filter-state';
 
 /** Today's date; a token so tests can pin it. */
 export const TODAY = new InjectionToken<() => Date>('TODAY', { providedIn: 'root', factory: () => () => new Date() });
@@ -20,12 +20,17 @@ export const FilterStore = signalStore(
       channels: store.channels(),
       categories: store.categories(),
       granularity: store.granularity(),
+      compare: store.compare(),
     }), { equal: sameFilter });
     return {
       filter,
       range: computed(() => resolveRange(filter(), today())),
       apiParams: computed(() => toApiParams(filter(), today()), { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) }),
-      isDefault: computed(() => sameFilter({ ...filter(), granularity: 'month' }, DEFAULT_FILTER)),
+      /** The `compare` API parameter for the dashboard metrics; null when there is no comparison. */
+      compareParam: computed(() => compareParam(filter(), today())),
+      compareUnavailable: computed(() => compareUnavailableReason(filter(), today())),
+      // Granularity and comparison are display settings, not filters: "Reset filters" keeps them.
+      isDefault: computed(() => sameFilter({ ...filter(), granularity: DEFAULT_FILTER.granularity, compare: DEFAULT_FILTER.compare }, DEFAULT_FILTER)),
     };
   }),
   withMethods((store) => ({
@@ -38,9 +43,9 @@ export const FilterStore = signalStore(
     update(changes: Partial<FilterState>): void {
       patchState(store, changes);
     },
-    /** Clears filters but keeps the chosen chart granularity. */
+    /** Clears filters but keeps the chart granularity and the comparison mode. */
     reset(): void {
-      patchState(store, { ...DEFAULT_FILTER, granularity: store.granularity() });
+      patchState(store, { ...DEFAULT_FILTER, granularity: store.granularity(), compare: store.compare() });
     },
   })),
 );

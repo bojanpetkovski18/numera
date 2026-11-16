@@ -32,19 +32,22 @@ public static class MetricsEndpoints
     }
 
     private static async Task<IResult> SummaryAsync(
-        [AsParameters] MetricsFilterQuery query, GetMetricsSummaryHandler handler, CancellationToken ct)
+        [AsParameters] MetricsFilterQuery query, [FromQuery] string? compare, GetMetricsSummaryHandler handler, CancellationToken ct)
     {
         var (filter, errors) = OrderFilterParser.Parse(query.ToInput(), allowStatus: false);
-        return errors.Count > 0 ? Results.ValidationProblem(errors) : Results.Ok(await handler.HandleAsync(filter, ct));
+        var comparison = PeriodComparison.Parse(compare, filter, errors);
+        return errors.Count > 0 ? Results.ValidationProblem(errors) : Results.Ok(await handler.HandleAsync(filter, comparison, ct));
     }
 
     private static async Task<IResult> TimeseriesAsync(
         [AsParameters] MetricsFilterQuery query,
         [FromQuery] string? granularity,
+        [FromQuery] string? compare,
         GetRevenueTimeseriesHandler handler,
         CancellationToken ct)
     {
         var (filter, errors) = OrderFilterParser.Parse(query.ToInput(), allowStatus: false);
+        var comparison = PeriodComparison.Parse(compare, filter, errors);
         if (!Periods.TryParseGranularity(granularity, out var unit))
         {
             errors["granularity"] = ["granularity must be one of: day, week, month."];
@@ -55,7 +58,7 @@ public static class MetricsEndpoints
             return Results.ValidationProblem(errors);
         }
 
-        var series = await handler.HandleAsync(filter, unit, ct);
+        var series = await handler.HandleAsync(filter, unit, comparison, ct);
         return series is null
             ? Results.ValidationProblem(new Dictionary<string, string[]>
             {

@@ -1,5 +1,5 @@
 import { Granularity, parseIsoDate, toIsoDate } from '../format/format';
-import { FilterState, resolveRange, toQueryParams } from './filter-state';
+import { FilterState, NO_DASHBOARD_SETTINGS, resolveRange, toQueryParams } from './filter-state';
 
 export type DrillDimension = 'category' | 'region' | 'channel';
 
@@ -45,7 +45,7 @@ export function drillToGroup(filter: FilterState, by: DrillDimension, key: strin
 
 /** Query params for the orders grid showing the rows behind a drilled filter. */
 export function drillQueryParams(filter: FilterState): Record<string, string | string[]> {
-  return { ...withoutNulls({ ...toQueryParams(filter), granularity: null }), status: DRILL_STATUS };
+  return { ...withoutNulls({ ...toQueryParams(filter), ...NO_DASHBOARD_SETTINGS }), status: DRILL_STATUS };
 }
 
 /** Query params for a link that opens the dashboard with this filter. */

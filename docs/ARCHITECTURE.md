@@ -117,6 +117,31 @@ Timeseries details:
 
 Breakdown details: groups that have only refunded or cancelled lines are listed with zero revenue and zero orders.
 
+## Period comparison
+
+`compare=previous|year` on `GET /api/metrics/summary` and `GET /api/metrics/timeseries` compares the filtered range with an earlier one (`PeriodComparison` in `Numera.Application/Metrics`). Without `compare`, the responses are as above, with `comparison` and `changes` set to null.
+
+Comparison period, for a range of n days from `from` to `to` (both required; otherwise a 400 naming `compare`):
+
+- **Previous period** (`previous`): the n days ending the day before `from`. It is "the same number of days", not "the previous calendar quarter": July to September (92 days) is compared with 31 March to 30 June.
+- **Same period last year** (`year`): `from` and `to` one year earlier. 29 February becomes 28 February.
+- Every other filter (region, channel, category) applies to both periods.
+
+Changes (`changes` in the summary), computed from the reported, rounded values of both periods:
+
+- **Revenue, orders, average order value**: (current - comparison) / comparison, rounded to 4 decimals (`0.124` = +12.4%). Null when the comparison value is 0.
+- **Refund rate** (`refundRateDifference`): current rate - comparison rate, in percentage points as a fraction (`-0.0833` = 8.3 points lower), rounded to 4 decimals. Null when either period has no completed or refunded lines.
+
+The summary's `comparison` object holds the comparison dates and the same KPIs as the current period. Each period is its own query, so they equal the summary for those dates requested directly.
+
+Comparison series (timeseries `comparisonRevenue`, `comparisonOrders` on each point, and `comparison` with the dates):
+
+- Each comparison day is moved forward by the gap between the periods (n days, or one year) and counted in the current period it lands in. So comparison point i always sits next to current point i, and a weekly comparison of a range that does not start on a Monday still covers the same days of the calendar as the current week it is shown with.
+- The moved days fall inside the current range, with one exception: a range starting on 29 February is compared from 28 February, which moves to the day before the range. That day is counted in the first period, so the series still adds up to the comparison revenue.
+- Periods are rounded to the cent separately, so the series total can differ from the summary's comparison revenue by a cent or two, as for the current series.
+
+On the dashboard, "Compare to" in the filter bar sets `compare` (kept in the URL with the granularity; neither is sent to the orders grid or carried into a drill-down). It is disabled, with the reason shown, for "All time" and for custom ranges without both dates. The KPI cards show the change with an arrow, a sign and words for screen readers; green or red depends on whether the change is good (a rising refund rate is bad), so colour is never the only signal. A change that rounds to 0.0 is shown as no change. The revenue chart draws the comparison as a dashed, muted line, listed in a legend and in the data table; clicking a period still opens the current period's rows.
+
 ## CSV export
 
 `GET /api/orders/export` returns every row `GET /api/orders` would return for the same filters, `status`, `q`, `sort` and `dir`, across all pages, in the same order (the two share `OrdersSql`).

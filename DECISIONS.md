@@ -450,4 +450,23 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - The live demo now follows `main` (`render.yaml`, replacing the `dev` branch named in D052), so it changes only when a release is made, not with every merge into `dev`.
 - Versions follow semantic versioning: patch for fixes and docs, minor for new features, major for breaking changes to the API or the data.
 
-_Add new decisions below as D056, D057, ..._
+## D056: Version 2 scope and order
+
+- The owner chose version 2 from a list of fifteen ideas, on the advice to favour features that show up in a demo and that clients ask for: period comparison (M13), "What changed?" (M14), import column mapping (M15), saved views and share links (M16), an optional plain-English question box (M17), and a release milestone (M18). The scope is in `docs/SPEC.md` section 12, with one prompt per milestone in `prompts/`.
+- Order: comparison first, because "What changed?" and the AI answers build on it; column mapping before sharing, because it matters more to clients evaluating the tool with their own data.
+- M17 waits for the owner's confirmation: it needs an API key and a cost limit, and the app must keep working without it.
+- Workspaces and roles, scheduled emails, PDF/Excel export, Excel upload, forecasting and dark mode stay out of version 2: each is large or needs paid services, and none is needed to show the "from numbers to decisions" story.
+
+## D057: How period comparison works
+
+- **Changes are computed on the server**, in `MetricDefinitions`, next to the KPI definitions, and returned in `changes`. The web app only formats them, so there is one definition of "+12.4%", tested once.
+- **Changes use the reported, rounded values** of both periods, so the percentage on a card can be checked against the two numbers shown on it.
+- **The refund rate change is a difference in percentage points**, not a relative change: going from 4.0% to 5.0% is "+1.0 pts", not "+25%", which would overstate a small move.
+- **"Previous period" is the same number of days**, not the previous calendar month or quarter. It works for any range, including custom ones, and needs no rules about partial months. Q3 (92 days) is therefore compared with 31 March to 30 June. Calendar-aligned comparison would be a separate mode if clients ask for it.
+- **The comparison series is aligned by moving each comparison day forward** by the gap and grouping it into the current periods. The alternative, grouping the comparison period by its own calendar weeks or months, gives series of different lengths that cannot be drawn on one axis. The cost is that a comparison "week" can cover different weekdays when the gap is not a multiple of 7, which is documented.
+- **Each period is its own SQL query** (two round trips) rather than one query over both ranges. It reuses the existing filter SQL unchanged and guarantees that the comparison equals the summary for those dates. Measured cost: about 30 ms extra for a quarter; documented in `PROGRESS.md`.
+- **Comparison is a dashboard setting** like the granularity: it is kept in the dashboard URL and in the store, but never sent to the orders grid, exports or drill-downs, and "Reset filters" keeps it.
+- **The KPI cards say "vs last year"**; the full dates are shown once above the cards. The longer "same period last year" made every card wrap at desktop widths. The chart legend and data table, which have room, keep the full name.
+- The breakdown charts are not compared: explaining the change by group is M14's job.
+
+_Add new decisions below as D058, D059, ..._
