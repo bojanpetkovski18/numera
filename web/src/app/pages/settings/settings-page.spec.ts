@@ -31,11 +31,12 @@ describe('SettingsPage', () => {
   let importResets: number;
   const el = () => fixture.nativeElement as HTMLElement;
   const dialog = () => el().querySelector('dialog') as HTMLDialogElement;
-  const opener = () => el().querySelector('section button') as HTMLButtonElement;
+  const reset = () => el().querySelector('section[aria-labelledby="reset-title"]') as HTMLElement;
+  const opener = () => reset().querySelector('button') as HTMLButtonElement;
   const dialogButton = (label: string) =>
     Array.from(dialog().querySelectorAll('button')).find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
-  const status = () => el().querySelector('[role="status"]')?.textContent?.trim() ?? '';
-  const alert = () => el().querySelector('[role="alert"]')?.textContent?.trim() ?? null;
+  const status = () => reset().querySelector('[role="status"]')?.textContent?.trim() ?? '';
+  const alert = () => reset().querySelector('[role="alert"]')?.textContent?.trim() ?? null;
 
   async function settle(): Promise<void> {
     TestBed.tick();
@@ -61,6 +62,8 @@ describe('SettingsPage', () => {
     Object.assign(imports, { reset: () => { importResets++; originalReset(); } });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(SettingsPage);
+    await settle();
+    http.expectOne('/api/shares').flush([]);
     await settle();
   });
 

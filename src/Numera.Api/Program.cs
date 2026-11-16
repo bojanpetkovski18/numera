@@ -13,6 +13,7 @@ using Numera.Api.Demo;
 using Numera.Api.Imports;
 using Numera.Api.Metrics;
 using Numera.Api.Orders;
+using Numera.Api.Views;
 using Numera.Api.WebApp;
 using Numera.Application;
 using Numera.Application.Imports;
@@ -111,6 +112,19 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IConfiguration>((lim
                 QueueLimit = 0,
             }));
 
+    // Share links are public: a generous limit per client address stops scraping and token guessing, not readers.
+    var sharedPermitLimit = configuration.GetValue("RateLimiting:SharedPermitLimit", 120);
+    var sharedWindowSeconds = configuration.GetValue("RateLimiting:SharedWindowSeconds", 60);
+    limiter.AddPolicy(SharedEndpoints.RateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = sharedPermitLimit,
+                Window = TimeSpan.FromSeconds(sharedWindowSeconds),
+                QueueLimit = 0,
+            }));
+
     limiter.OnRejected = async (context, ct) =>
     {
         var retryText = "Wait a moment before trying again.";
@@ -122,7 +136,12 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IConfiguration>((lim
         }
 
         var policy = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
-        var title = policy == DemoEndpoints.ResetRateLimitPolicy ? "Too many demo resets" : "Too many login attempts";
+        var title = policy switch
+        {
+            DemoEndpoints.ResetRateLimitPolicy => "Too many demo resets",
+            SharedEndpoints.RateLimitPolicy => "Too many requests",
+            _ => "Too many login attempts",
+        };
         await Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: title, detail: retryText)
             .ExecuteAsync(context.HttpContext);
     };
@@ -189,6 +208,8 @@ app.MapImportMappingEndpoints();
 app.MapMetricsEndpoints();
 app.MapOrderEndpoints();
 app.MapDemoEndpoints();
+app.MapViewEndpoints();
+app.MapSharedEndpoints();
 if (serveWebApp)
 {
     app.MapWebAppFallback();

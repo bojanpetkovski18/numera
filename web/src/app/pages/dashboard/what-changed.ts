@@ -6,6 +6,7 @@ import { FilterStore } from '../../core/filters/filter.store';
 import { formatCurrency, formatDate } from '../../core/format/format';
 import { problemMessage } from '../../core/http/problem';
 import { COMPARISON_SHORT_TITLES, compareParams } from './comparison';
+import { DASHBOARD_SOURCE } from './dashboard-source';
 import { DRIVER_DIMENSIONS, barWidth, formatSignedMoney, splitDrivers, summarySentence } from './drivers';
 import { Driver, DriverDimension, RevenueDrivers } from './metrics.models';
 
@@ -65,18 +66,25 @@ import { Driver, DriverDimension, RevenueDrivers } from './metrics.models';
             <ul class="drivers">
               @for (x of split().shown; track x.key) {
                 <li class="driver">
-                  <a class="name" routerLink="/orders" [queryParams]="currentRows(x)">
-                    {{ x.key }}<span class="visually-hidden">: this period's orders</span>
-                  </a>
+                  @if (source.drillDown) {
+                    <a class="name" routerLink="/orders" [queryParams]="currentRows(x)">
+                      {{ x.key }}<span class="visually-hidden">: this period's orders</span>
+                    </a>
+                  } @else {
+                    <span class="name">{{ x.key }}</span>
+                  }
                   <span class="amount" [class.up]="x.contribution > 0" [class.down]="x.contribution < 0">{{ signed(x.contribution) }}</span>
                   <span class="track" aria-hidden="true">
                     <span class="bar" [class.down]="x.contribution < 0" [style.width.%]="width(x.contribution) / 2"></span>
                   </span>
                   <span class="detail">
-                    {{ money(x.currentRevenue) }} vs {{ money(x.comparisonRevenue) }} ·
-                    <a routerLink="/orders" [queryParams]="comparisonRows(x)">
-                      {{ comparisonTitle() }} orders<span class="visually-hidden"> for {{ x.key }}</span>
-                    </a>
+                    {{ money(x.currentRevenue) }} vs {{ money(x.comparisonRevenue) }}
+                    @if (source.drillDown) {
+                      ·
+                      <a routerLink="/orders" [queryParams]="comparisonRows(x)">
+                        {{ comparisonTitle() }} orders<span class="visually-hidden"> for {{ x.key }}</span>
+                      </a>
+                    }
                   </span>
                 </li>
               }
@@ -210,13 +218,14 @@ import { Driver, DriverDimension, RevenueDrivers } from './metrics.models';
 })
 export class WhatChanged {
   private readonly filters = inject(FilterStore);
+  protected readonly source = inject(DASHBOARD_SOURCE);
   protected readonly dimensions = DRIVER_DIMENSIONS;
   protected readonly by = signal<DriverDimension>('region');
 
   protected readonly drivers = httpResource<RevenueDrivers>(() => {
     const compare = this.filters.compareParam();
     // Not requested without a comparison (the dashboard hides the panel then anyway).
-    return compare ? { url: '/api/metrics/drivers', params: { ...this.filters.apiParams(), by: this.by(), ...compareParams(compare) } } : undefined;
+    return compare ? { url: `${this.source.base}/drivers`, params: { ...this.filters.apiParams(), by: this.by(), ...compareParams(compare) } } : undefined;
   });
 
   protected readonly result = computed(() => (this.drivers.hasValue() ? this.drivers.value() : undefined));

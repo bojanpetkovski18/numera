@@ -13,10 +13,14 @@ public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) 
     public DbSet<ImportError> ImportErrors => Set<ImportError>();
     public DbSet<User> Users => Set<User>();
     public DbSet<SavedImportMapping> SavedImportMappings => Set<SavedImportMapping>();
+    public DbSet<SavedView> SavedViews => Set<SavedView>();
+    public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SavedImportMapping>(ConfigureSavedImportMapping);
+        modelBuilder.Entity<SavedView>(ConfigureSavedView);
+        modelBuilder.Entity<ShareLink>(ConfigureShareLink);
         // pg_trgm backs the case-insensitive order_id "contains" search in the orders grid.
         modelBuilder.HasPostgresExtension("pg_trgm");
         modelBuilder.Entity<Order>(ConfigureOrder);
@@ -110,6 +114,27 @@ public partial class NumeraDbContext(DbContextOptions<NumeraDbContext> options) 
         // Names are unique per user (case-insensitively, checked by the handler; exact duplicates also by the index).
         b.HasIndex(m => new { m.UserId, m.Name }).IsUnique().HasDatabaseName("ux_import_mappings_user_id_name");
         b.HasOne<User>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureSavedView(EntityTypeBuilder<SavedView> b)
+    {
+        b.ToTable("saved_views");
+        b.HasKey(v => v.Id);
+        b.Property(v => v.Name).HasMaxLength(80);
+        b.Property(v => v.SettingsJson).HasColumnType("text");
+        b.HasIndex(v => new { v.UserId, v.Name }).IsUnique().HasDatabaseName("ux_saved_views_user_id_name");
+        b.HasOne<User>().WithMany().HasForeignKey(v => v.UserId).OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureShareLink(EntityTypeBuilder<ShareLink> b)
+    {
+        b.ToTable("share_links");
+        b.HasKey(l => l.Id);
+        b.Property(l => l.TokenHash).HasMaxLength(64).IsFixedLength();
+        // The public endpoints look links up by hash only.
+        b.HasIndex(l => l.TokenHash).IsUnique().HasDatabaseName("ux_share_links_token_hash");
+        b.HasIndex(l => l.ViewId).HasDatabaseName("ix_share_links_view_id");
+        b.HasOne<SavedView>().WithMany().HasForeignKey(l => l.ViewId).OnDelete(DeleteBehavior.Cascade);
     }
 
     private static string ToSnakeCase(string name) => PascalBoundary().Replace(name, "_$1").ToLowerInvariant();

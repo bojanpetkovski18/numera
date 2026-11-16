@@ -14,6 +14,8 @@ public interface INumeraDbContext
     DbSet<ImportError> ImportErrors { get; }
     DbSet<User> Users { get; }
     DbSet<SavedImportMapping> SavedImportMappings { get; }
+    DbSet<SavedView> SavedViews { get; }
+    DbSet<ShareLink> ShareLinks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -492,4 +492,21 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - **Status values are not mapped** (for example "Paid" to completed): that would need a value-mapping step, kept out of version 2.
 - **The drop zone stays usable during the mapping step**: dimming it for that long failed the contrast check, and choosing another file there simply starts over.
 
-_Add new decisions below as D060, D061, ..._
+## D060: Saved views and share links
+
+- **Views store the dashboard's settings, not resolved dates.** "Last 90 days" stays rolling, which is what someone saving "my last 90 days view" expects. On the server, presets resolve against today's UTC date. The browser uses its local date, so a view opened just after midnight can differ by a day from its shared link; this is accepted and documented.
+- **Share tokens are bearer secrets**, handled like passwords:
+  - 256 random bits, only the SHA-256 hash stored, shown once;
+  - checked for format before the database is touched;
+  - every failure (malformed, unknown, revoked, expired) is the same 404, so a guess reveals nothing.
+  
+  A plain hash rather than a slow password hash is enough, because the token has 256 bits of entropy (unlike a human password). Revoking sets a time rather than deleting, so the history stays.
+- **The link shares the view, not a copy.** Renaming or changing the view changes what the link shows, and deleting the view ends its links. This is simpler to explain than snapshots, and matches "share this dashboard".
+- **Public endpoints use the view's own filter, whatever the request says.** The shared page reuses the dashboard widgets, which send filter parameters out of habit; the server ignores them. A test checks that a request trying to widen the dates or switch region gets exactly the view's figures.
+- **Aggregates only.** The orders grid and export are not reachable through a token: sharing a dashboard should not hand out customer IDs and order lines. The shared page therefore has no drill-down.
+- **Rate limit per client address** (120 a minute) on the public endpoints, separate from the signed-in ones. It slows scraping and guessing without getting in the way of a person reading a dashboard (about 7 requests per page load).
+- **No referrer, no caching, no indexing** for anything carrying a token: the API responses, the token-creating response and the shared HTML page. Request paths are not logged at the configured log levels.
+- **Views and links are per user**, although the demo has one shared demo user. A demo reset deletes them, so links made on the public demo do not outlive the next reset.
+- Limits: 50 views per user, 10 active links per view, links for 1, 7 or 30 days.
+
+_Add new decisions below as D061, D062, ..._

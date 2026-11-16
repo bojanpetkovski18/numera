@@ -7,6 +7,7 @@ import { formatCurrency, formatInteger } from '../../core/format/format';
 import { problemMessage } from '../../core/http/problem';
 import { ChartCanvas } from '../../shared/chart/chart-canvas';
 import { breakdownChartConfig, describeBreakdown, readChartColors } from './chart-configs';
+import { DASHBOARD_SOURCE } from './dashboard-source';
 import { RevenueBreakdown } from './metrics.models';
 
 @Component({
@@ -32,11 +33,13 @@ import { RevenueBreakdown } from './metrics.models';
           [config]="config()"
           [label]="description()"
           [style.--chart-height]="height()"
-          [items]="items()"
+          [items]="source.drillDown ? items() : []"
           [hint]="'Use the arrow keys to choose a ' + dimensionLabel().toLowerCase() + ', then press Enter to see its orders.'"
           (selectItem)="open($event)"
         />
-        <p class="chart-hint">Select a bar to see its completed order lines.</p>
+        @if (source.drillDown) {
+          <p class="chart-hint">Select a bar to see its completed order lines.</p>
+        }
         <details class="table-toggle">
           <summary>Show data table</summary>
           <table class="data-table">
@@ -47,7 +50,13 @@ import { RevenueBreakdown } from './metrics.models';
             <tbody>
               @for (g of breakdown.value().groups; track g.key) {
                 <tr>
-                  <th scope="row"><a routerLink="/orders" [queryParams]="drills()[$index]">{{ g.key }}</a></th>
+                  <th scope="row">
+                    @if (source.drillDown) {
+                      <a routerLink="/orders" [queryParams]="drills()[$index]">{{ g.key }}</a>
+                    } @else {
+                      {{ g.key }}
+                    }
+                  </th>
                   <td>{{ money(g.revenue) }}</td>
                   <td>{{ count(g.orders) }}</td>
                 </tr>
@@ -78,11 +87,12 @@ export class BreakdownChart {
   readonly title = input.required<string>();
 
   private readonly filters = inject(FilterStore);
+  protected readonly source = inject(DASHBOARD_SOURCE);
   private readonly router = inject(Router);
   private readonly colors = readChartColors();
 
   protected readonly breakdown = httpResource<RevenueBreakdown>(() => ({
-    url: '/api/metrics/breakdown',
+    url: `${this.source.base}/breakdown`,
     params: { ...this.filters.apiParams(), by: this.by() },
   }));
 

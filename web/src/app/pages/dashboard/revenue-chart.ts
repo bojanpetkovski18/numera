@@ -8,6 +8,7 @@ import { problemMessage } from '../../core/http/problem';
 import { ChartCanvas } from '../../shared/chart/chart-canvas';
 import { describeSeries, readChartColors, revenueChartConfig } from './chart-configs';
 import { COMPARISON_TITLES, compareParams } from './comparison';
+import { DASHBOARD_SOURCE } from './dashboard-source';
 import { RevenueTimeseries } from './metrics.models';
 
 @Component({
@@ -57,11 +58,13 @@ import { RevenueTimeseries } from './metrics.models';
         <app-chart-canvas
           [config]="config()"
           [label]="description()"
-          [items]="items()"
+          [items]="source.drillDown ? items() : []"
           [hint]="'Use the arrow keys to choose a ' + series.value().granularity + ', then press Enter to see its orders.'"
           (selectItem)="open($event)"
         />
-        <p class="chart-hint">Select a {{ series.value().granularity }} to see its completed order lines.</p>
+        @if (source.drillDown) {
+          <p class="chart-hint">Select a {{ series.value().granularity }} to see its completed order lines.</p>
+        }
         <details class="table-toggle">
           <summary>Show data table</summary>
           <div class="table-scroll">
@@ -81,7 +84,13 @@ import { RevenueTimeseries } from './metrics.models';
               <tbody>
                 @for (p of series.value().points; track p.periodStart) {
                   <tr>
-                    <th scope="row"><a routerLink="/orders" [queryParams]="drills()[$index]">{{ period(p.periodStart) }}</a></th>
+                    <th scope="row">
+                      @if (source.drillDown) {
+                        <a routerLink="/orders" [queryParams]="drills()[$index]">{{ period(p.periodStart) }}</a>
+                      } @else {
+                        {{ period(p.periodStart) }}
+                      }
+                    </th>
                     <td>{{ money(p.revenue) }}</td>
                     <td>{{ count(p.orders) }}</td>
                     @if (comparisonTitle()) {
@@ -155,6 +164,7 @@ import { RevenueTimeseries } from './metrics.models';
 })
 export class RevenueChart {
   protected readonly filters = inject(FilterStore);
+  protected readonly source = inject(DASHBOARD_SOURCE);
   private readonly today = inject(TODAY);
   private readonly router = inject(Router);
   private readonly colors = readChartColors();
@@ -166,7 +176,7 @@ export class RevenueChart {
   ];
 
   protected readonly series = httpResource<RevenueTimeseries>(() => ({
-    url: '/api/metrics/timeseries',
+    url: `${this.source.base}/timeseries`,
     params: { ...this.filters.apiParams(), granularity: this.filters.granularity(), ...compareParams(this.filters.compareParam()) },
   }));
 

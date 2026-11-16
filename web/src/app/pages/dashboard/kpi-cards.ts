@@ -4,6 +4,7 @@ import { FilterStore } from '../../core/filters/filter.store';
 import { formatCurrency, formatDate, formatInteger, formatKpiCurrency, formatPercent } from '../../core/format/format';
 import { problemMessage } from '../../core/http/problem';
 import { COMPARISON_NAMES, COMPARISON_SHORT_NAMES, COMPARISON_SHORT_TITLES, ChangeView, changeView, compareParams } from './comparison';
+import { DASHBOARD_SOURCE } from './dashboard-source';
 import { MetricsSummary } from './metrics.models';
 
 interface Kpi {
@@ -143,9 +144,10 @@ interface Kpi {
 })
 export class KpiCards {
   private readonly filters = inject(FilterStore);
+  private readonly source = inject(DASHBOARD_SOURCE);
 
   protected readonly summary = httpResource<MetricsSummary>(() => ({
-    url: '/api/metrics/summary',
+    url: `${this.source.base}/summary`,
     params: { ...this.filters.apiParams(), ...compareParams(this.filters.compareParam()) },
   }));
 

@@ -25,6 +25,12 @@ public static class WebAppHosting
         headers.XContentTypeOptions = "nosniff"; // stops browsers guessing a different content type (CSV downloads)
         headers.XFrameOptions = "DENY";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        if (context.Request.Path.StartsWithSegments("/shared"))
+        {
+            // The shared page's URL holds a share token: never send it on as a referrer, keep it out of search engines.
+            headers["Referrer-Policy"] = "no-referrer";
+            headers["X-Robots-Tag"] = "noindex, nofollow";
+        }
         headers.ContentSecurityPolicy = ContentSecurityPolicy;
         await next(context);
     });
