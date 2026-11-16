@@ -139,7 +139,7 @@ describe('AskBox', () => {
 
   it('asks an example question with one click', async () => {
     await render();
-    el().querySelector<HTMLButtonElement>('.hint .link')!.click();
+    el().querySelector<HTMLButtonElement>('.examples button')!.click();
     await settle(fixture);
 
     const request = http.expectOne('/api/ask');

@@ -75,11 +75,17 @@ public sealed class ClaudeAskModel(AnthropicClient client, IOptions<AskOptions> 
             logger.LogWarning(ex, "Ask model unreachable");
             return new AskModelResult(null, AskModelFailure.Unavailable);
         }
+        catch (AnthropicApiException ex)
+        {
+            // Any other 4xx (a wrong or revoked key, a model this account cannot use): a configuration problem for
+            // the operator, logged as an error; visitors get the same "not available right now" as for an outage.
+            logger.LogError(ex, "Ask model request failed");
+            return new AskModelResult(null, AskModelFailure.Unavailable);
+        }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             logger.LogWarning("Ask model timed out");
             return new AskModelResult(null, AskModelFailure.Unavailable);
         }
-        // 4xx other than 429 (a bad key, a bad request) are configuration or code errors: they surface as 500s and are logged.
     }
 }

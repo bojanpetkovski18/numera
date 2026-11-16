@@ -103,6 +103,35 @@ Files whose column names or formats are not Numera's can be imported with a mapp
   - It has loading, "link no longer works" (404) and retryable error states.
 - A demo reset deletes saved views and their links, like saved import mappings.
 
+## Ask in plain English (M17)
+
+A question box on the dashboard turns a question into one of the dashboard's own requests. It is **off unless `Ai:ApiKey` is set**: then `GET /api/ask/status` says `enabled: true` and the box appears. Without a key, `POST /api/ask` is a 404 and the app works fully.
+
+1. `POST /api/ask` with `{ "question": "..." }` (1 to 300 characters, signed in).
+2. **The model's step** (`ClaudeAskModel`, Anthropic C# SDK, `Ai:Model` default `claude-opus-5-5` at `low` effort):
+   - The model receives fixed instructions (a cached system block), then today's date, the data's dates and the allowed regions, channels and categories (a second system block), then the question.
+   - It must reply with JSON matching `AskSchema` (structured output): metric, view, granularity, dimension, dates, filter values, comparison, or `answerable: false` with a reason. There is no free text, and no SQL.
+   - Server-side fallbacks (beta) let a request a safety classifier declines be served by another model instead of failing.
+3. **The checks** (`AskReply`, `AskValidator`), run on whatever comes back:
+   - It must parse exactly, with no missing, extra or null fields.
+   - The metric and view must be known. Average order value and refund rate are totals only.
+   - Each filter value must exist in the data (matched to its spelling, ignoring case).
+   - Dates are checked by `OrderFilterParser`, and a comparison needs both dates.
+   
+   Anything else becomes "cannot answer", with a reason the user can read.
+4. **The dashboard's own handlers run the checked request**: summary, timeseries or breakdown. A split by group has no comparison, as on the dashboard.
+5. **The response** is `{ status, request, result, reason }`. `result` is exactly what the matching dashboard endpoint returns.
+6. **On the page:** the answer shows the request as chips. Removing one re-runs the request through the normal `/api/metrics/*` endpoints, with no new model call. "Show on the dashboard" applies it to the filters.
+
+Limits and failures:
+
+- **Per user:** 5 questions a minute (`Ai:PerUserPerMinute`, rate limiter partitioned by user, so it runs after authentication).
+- **Per day:** 200 questions across all users (`Ai:DailyLimit`), counted in memory per UTC day, so the count restarts with the process. Both limits return 429 problem details.
+- **Model failures:** a 30 s timeout and one retry. Rate limits, 5xx, network errors and other API errors (for example a wrong key, which is logged as an error) return 503. A refusal or an unusable reply is "cannot answer".
+- **Logging:** questions are never logged, only their length and the outcome. Token use per call is logged for cost tracking.
+- **Prompt injection:** a question can at most change which allowed values are chosen. Nothing the model returns runs as code or SQL, and only validated, whitelisted requests run.
+- **Evaluation:** `tools/Numera.AskEval` runs 20 questions with expected interpretations against the real model, with a fixed "today" and the demo data's values. It needs a key and costs money, so it is run by hand, not in CI.
+
 ## Deployment
 
 - `docker compose up --build` runs PostgreSQL and the app (http://localhost:8080). With `Database__PrepareOnStartup=true`, the app applies migrations and loads the demo data into an empty database on its first start.

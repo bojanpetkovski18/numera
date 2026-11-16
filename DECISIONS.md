@@ -509,4 +509,25 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - **Views and links are per user**, although the demo has one shared demo user. A demo reset deletes them, so links made on the public demo do not outlive the next reset.
 - Limits: 50 views per user, 10 active links per view, links for 1, 7 or 30 days.
 
-_Add new decisions below as D061, D062, ..._
+## D061: Ask in plain English
+
+- **The model translates; Numera answers.** The model's only output is a request in a fixed JSON schema (structured output), which is checked like any request from the UI and run by the dashboard's own query handlers. So an answer's figures are the dashboard's figures, by construction, and the request is shown as chips anyone can check and change. The model never writes SQL, prose answers or numbers.
+- **Structured output rather than a forced tool call.** Forced `tool_choice` is not available on the current models; the JSON schema output gives the same guarantee with less code. The reply is still parsed strictly (no missing, extra or null fields) and validated, because nothing from outside is trusted.
+- **Model: `claude-opus-5-5` at low effort**, configurable as `Ai:Model`. This follows Anthropic's current default. The task is a short translation into a fixed shape, so effort is set to low to keep latency and cost down. A cheaper model can be tried by changing the setting and re-running the evaluation; it is the owner's call, not a silent downgrade.
+- **Prompt:** fixed instructions first, as a cached system block, then a small block with today's date, the data's dates and the allowed values. The allowed values are given to the model so it can map "the US" to "North America"; the validator still rejects anything not in the data. Caching only starts above a minimum prompt length, so it may not apply to a prompt this short (check `cache read` in the logged usage).
+- **Server-side fallbacks** (beta `server-side-fallback-2026-07-01`, `fallbacks: "default"`) are on. A question a safety classifier declines is served by another model instead of failing. A remaining refusal is shown as "cannot answer".
+- **Off by default.** No key, no feature: the status endpoint says so, the box is not rendered, `POST /api/ask` is a 404. The key comes only from configuration (`Ai__ApiKey`; Compose maps `ANTHROPIC_API_KEY` from `.env`; Render has it as a secret setting), never from the repository.
+- **Cost controls for a public demo:**
+  - 5 questions a minute per user and 200 a day in total (both configurable);
+  - one retry, and a 30 s timeout;
+  - questions of at most 300 characters.
+  
+  The daily count is in memory, which is enough for the single-instance demo; it restarts with the process. A multi-instance deployment would need a shared counter.
+- **Errors:**
+  - A wrong key or another 4xx is logged as an error for the operator, and users see "not available right now" (503), as during an outage.
+  - Questions are not logged, only their length, the outcome and token usage.
+- **The middleware order changed:** the rate limiter now runs after authentication, so a policy can partition by user. The existing login, reset and share-link limits partition by client address and are unaffected.
+- **Evaluation as a tool, not a test.** `tools/Numera.AskEval` (a console project in the solution, so CI compiles it) sends 20 questions with expected interpretations to the real model and prints pass/fail per question and the token usage. It needs a key and costs money, so it does not run in CI. The automated tests use a fake model client and cover validation, limits, errors and the "same figures as the dashboard" guarantee. This adds a `tools/` folder to the repository layout.
+- **Out of scope:** chat history and follow-up questions, free-text answers, questions outside the metrics (customers, products by SKU, forecasts, profit).
+
+_Add new decisions below as D062, D063, ..._

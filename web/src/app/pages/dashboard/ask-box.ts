@@ -50,11 +50,13 @@ interface Row {
           <button type="submit" class="btn primary" [disabled]="busy()">{{ busy() ? 'Working…' : 'Ask' }}</button>
         </form>
         <p class="hint" id="ask-hint">
-          An AI model turns your question into one of the dashboard's own requests, which Numera checks and runs. Try:
-          @for (example of examples; track example; let last = $last) {
-            <button type="button" class="link" (click)="ask(example)">{{ example }}</button>{{ last ? '' : ' · ' }}
-          }
+          An AI model turns your question into one of the dashboard's own requests, which Numera checks and runs.
         </p>
+        <ul class="examples" aria-label="Example questions">
+          @for (example of examples; track example) {
+            <li><button type="button" class="example" (click)="ask(example)">{{ example }}</button></li>
+          }
+        </ul>
 
         <div aria-live="polite">
           @if (busy()) {
@@ -136,8 +138,10 @@ interface Row {
     }
     .hint, .muted { color: var(--color-muted); font-size: var(--font-size-sm); }
     .hint { margin: var(--space-2) 0 0; }
-    .link {
-      padding: 0; border: 0; background: none; font: inherit; color: var(--color-primary); text-decoration: underline; cursor: pointer; text-align: left;
+    .examples { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+    .example {
+      min-height: 2.25rem; padding: var(--space-1) var(--space-3); border: 1px solid var(--color-border); border-radius: 999px;
+      background: var(--color-surface); color: var(--color-primary); font: inherit; font-size: var(--font-size-sm); cursor: pointer; text-align: left;
     }
     .answer { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
     h3 { margin: 0; font-size: var(--font-size-md); }
