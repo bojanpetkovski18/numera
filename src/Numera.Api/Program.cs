@@ -185,6 +185,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
     .AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapImportEndpoints();
+app.MapImportMappingEndpoints();
 app.MapMetricsEndpoints();
 app.MapOrderEndpoints();
 app.MapDemoEndpoints();

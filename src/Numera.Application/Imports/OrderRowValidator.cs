@@ -59,8 +59,10 @@ public static class OrderRowValidator
 
     /// <param name="raw">The row as read from the file.</param>
     /// <param name="today">The latest allowed order date; normally <see cref="LatestAllowedDate"/>.</param>
-    public static RowValidationResult Validate(RawOrderRow raw, DateOnly today)
+    /// <param name="formats">How dates and discounts are written; Numera's own format when null.</param>
+    public static RowValidationResult Validate(RawOrderRow raw, DateOnly today, ValueFormats? formats = null)
     {
+        formats ??= ValueFormats.Standard;
         var errors = new List<RowError>();
 
         var orderId = RequiredText(raw.OrderId, ImportColumns.OrderId, IdMaxLength, errors);
@@ -70,10 +72,10 @@ public static class OrderRowValidator
         var sku = RequiredText(raw.ProductSku, ImportColumns.ProductSku, IdMaxLength, errors);
         var category = RequiredText(raw.ProductCategory, ImportColumns.ProductCategory, NameMaxLength, errors);
 
-        var date = ParseDate(raw.OrderDate, today, errors);
+        var date = ParseDate(raw.OrderDate, today, formats.DateFormat, errors);
         var quantity = ParseQuantity(raw.Quantity, errors);
         var unitPrice = ParseUnitPrice(raw.UnitPrice, errors);
-        var discount = ParseDiscount(raw.Discount, errors);
+        var discount = formats.Discount == DiscountFormat.Percent ? ParsePercentDiscount(raw.Discount, errors) : ParseDiscount(raw.Discount, errors);
         var status = ParseStatus(raw.Status, errors);
 
         if (errors.Count > 0)
@@ -105,7 +107,7 @@ public static class OrderRowValidator
         return text;
     }
 
-    private static DateOnly? ParseDate(string? value, DateOnly today, List<RowError> errors)
+    private static DateOnly? ParseDate(string? value, DateOnly today, string format, List<RowError> errors)
     {
         var text = value?.Trim();
         if (string.IsNullOrEmpty(text))
@@ -114,9 +116,9 @@ public static class OrderRowValidator
             return null;
         }
 
-        if (!DateOnly.TryParseExact(text, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        if (!DateFormats.TryParse(text, format, out var date))
         {
-            errors.Add(new RowError(ImportColumns.OrderDate, $"order_date must be a valid date in {DateFormat} format."));
+            errors.Add(new RowError(ImportColumns.OrderDate, $"order_date must be a valid date in {format} format."));
             return null;
         }
 
@@ -217,6 +219,37 @@ public static class OrderRowValidator
         }
 
         return discount;
+    }
+
+    /// <summary>A discount written as a percentage (10 or 10%), stored as a fraction (0.10).</summary>
+    private static decimal? ParsePercentDiscount(string? value, List<RowError> errors)
+    {
+        var text = value?.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            errors.Add(new RowError(ImportColumns.Discount, "discount is required."));
+            return null;
+        }
+
+        if (!TryParseDecimal(text.TrimEnd('%').TrimEnd(), out var percent))
+        {
+            errors.Add(new RowError(ImportColumns.Discount, "discount must be a percentage between 0 and 100."));
+            return null;
+        }
+
+        if (percent < 0 || percent > 100)
+        {
+            errors.Add(new RowError(ImportColumns.Discount, "discount must be a percentage between 0 and 100."));
+            return null;
+        }
+
+        if (decimal.Round(percent, 1) != percent)
+        {
+            errors.Add(new RowError(ImportColumns.Discount, "discount must have at most 1 decimal place as a percentage."));
+            return null;
+        }
+
+        return percent / 100m;
     }
 
     private static OrderStatus? ParseStatus(string? value, List<RowError> errors)

@@ -21,18 +21,22 @@ public static class ImportColumns
     ];
 }
 
-/// <summary>The outcome of checking a CSV header row against the required columns.</summary>
+/// <summary>
+/// The outcome of checking a CSV header row: where each Numera field is (<see cref="ColumnIndex"/>, keyed by field),
+/// and what is missing, repeated or ignored. <see cref="Mapped"/> is true when it came from a column mapping.
+/// </summary>
 public sealed record HeaderEvaluation(
     IReadOnlyDictionary<string, int> ColumnIndex,
     int ColumnCount,
     IReadOnlyList<string> Missing,
     IReadOnlyList<string> Duplicated,
-    IReadOnlyList<string> Unknown)
+    IReadOnlyList<string> Unknown,
+    bool Mapped = false)
 {
     public bool IsValid => Missing.Count == 0 && Duplicated.Count == 0;
 
     public IReadOnlyList<string> Warnings =>
-        Unknown.Select(name => $"Unknown column '{name}' was ignored.").ToList();
+        Unknown.Select(name => Mapped ? $"Column '{name}' was not mapped and was ignored." : $"Unknown column '{name}' was ignored.").ToList();
 
     /// <summary>Matches names case-insensitively after trimming. Unknown columns are ignored with a warning.</summary>
     public static HeaderEvaluation Evaluate(IReadOnlyList<string?> headers)
@@ -43,7 +47,7 @@ public sealed record HeaderEvaluation(
 
         for (var i = 0; i < headers.Count; i++)
         {
-            var name = (headers[i] ?? string.Empty).Trim().TrimStart('\uFEFF').ToLowerInvariant();
+            var name = Clean(headers[i]).ToLowerInvariant();
             if (ImportColumns.Required.Contains(name))
             {
                 if (!index.TryAdd(name, i) && !duplicated.Contains(name))
@@ -60,4 +64,46 @@ public sealed record HeaderEvaluation(
         var missing = ImportColumns.Required.Where(c => !index.ContainsKey(c)).ToList();
         return new HeaderEvaluation(index, headers.Count, missing, duplicated, unknown);
     }
+
+    /// <summary>
+    /// Matches the mapping's source columns against the headers (case-insensitively, after trimming). A source column
+    /// that is absent is reported as missing, one that appears twice as duplicated; columns no field uses are ignored
+    /// with a warning. The index is keyed by Numera field, so the rest of the import reads mapped files unchanged.
+    /// </summary>
+    public static HeaderEvaluation FromMapping(IReadOnlyList<string?> headers, ImportMapping mapping)
+    {
+        var names = headers.Select(Clean).ToList();
+        var index = new Dictionary<string, int>();
+        var missing = new List<string>();
+        var duplicated = new List<string>();
+
+        foreach (var field in ImportColumns.Required)
+        {
+            var source = mapping.SourceFor(field);
+            var positions = Enumerable.Range(0, names.Count)
+                .Where(i => string.Equals(names[i], source, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (positions.Count == 0)
+            {
+                missing.Add($"{source} (for {field})");
+                continue;
+            }
+
+            index[field] = positions[0];
+            if (positions.Count > 1)
+            {
+                duplicated.Add(source);
+            }
+        }
+
+        var used = index.Values.ToHashSet();
+        var unknown = Enumerable.Range(0, names.Count)
+            .Where(i => !used.Contains(i) && !duplicated.Contains(names[i], StringComparer.OrdinalIgnoreCase))
+            .Select(i => names[i].Length == 0 ? $"(column {i + 1})" : names[i])
+            .ToList();
+        return new HeaderEvaluation(index, headers.Count, missing, duplicated, unknown, Mapped: true);
+    }
+
+    /// <summary>A header as written, without surrounding spaces or a byte order mark.</summary>
+    public static string Clean(string? header) => (header ?? string.Empty).Trim().TrimStart('﻿').Trim();
 }

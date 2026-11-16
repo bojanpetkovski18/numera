@@ -18,9 +18,10 @@ public sealed record ScanResult(HeaderEvaluation? Header, int DataRows, ImportRe
 /// <summary>First pass over an upload: checks the header and counts rows without touching the database.</summary>
 public static class ImportFileScanner
 {
-    public static async Task<ScanResult> ScanAsync(Stream stream, int maxRows = ImportLimits.MaxRows, CancellationToken ct = default)
+    public static async Task<ScanResult> ScanAsync(
+        Stream stream, ImportMapping? mapping = null, int maxRows = ImportLimits.MaxRows, CancellationToken ct = default)
     {
-        await using var reader = await OrderCsvReader.OpenAsync(stream);
+        await using var reader = await OrderCsvReader.OpenAsync(stream, mapping);
 
         if (reader.Header is null)
         {
@@ -30,7 +31,9 @@ public static class ImportFileScanner
         var header = reader.Header;
         if (header.Missing.Count > 0)
         {
-            var message = $"The file is missing required columns: {string.Join(", ", header.Missing)}.";
+            var message = header.Mapped
+                ? $"The file has no column named: {string.Join(", ", header.Missing)}."
+                : $"The file is missing required columns: {string.Join(", ", header.Missing)}.";
             return new ScanResult(header, 0, new ImportRejection(ImportRejectionKind.MissingColumns, message));
         }
 

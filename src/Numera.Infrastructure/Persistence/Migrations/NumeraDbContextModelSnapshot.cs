@@ -231,6 +231,50 @@ namespace Numera.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Numera.Application.Entities.SavedImportMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("MappingJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("mapping_json");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("name");
+
+                    b.PrimitiveCollection<string[]>("SourceHeaders")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("source_headers");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ux_import_mappings_user_id_name");
+
+                    b.ToTable("import_mappings", (string)null);
+                });
+
             modelBuilder.Entity("Numera.Application.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -278,6 +322,15 @@ namespace Numera.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ImportJobId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Numera.Application.Entities.SavedImportMapping", b =>
+                {
+                    b.HasOne("Numera.Application.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

@@ -22,9 +22,10 @@ public sealed class DemoSeeder(NumeraDbContext db, ILogger<DemoSeeder> logger)
 
     // Fixed statements, no user input. Users are kept. Import history goes with the data it produced, except the
     // job row of an import that has started but not yet taken the lock (it is still scanning its file): removing
-    // that row would make the import fail when it inserts its orders.
+    // that row would make the import fail when it inserts its orders. Saved import mappings go too: on the shared
+    // demo they are visitors' leftovers, and a reset should show the import screen as a first visitor sees it.
     private const string ClearSql = """
-        TRUNCATE TABLE import_errors, orders RESTART IDENTITY;
+        TRUNCATE TABLE import_errors, orders, import_mappings RESTART IDENTITY;
         DELETE FROM import_jobs WHERE status <> 'processing';
         """;
 

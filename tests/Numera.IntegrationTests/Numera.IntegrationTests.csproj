@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <Content Include="..\Fixtures\*.csv" Link="Fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The sample files the web app serves, so the tests check exactly what users download. -->
+    <Content Include="..\..\web\public\sample-orders*.csv" Link="Samples\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

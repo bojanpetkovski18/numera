@@ -44,15 +44,18 @@ public sealed class OrderCsvReader : IAsyncDisposable
         _parser = new CsvParser(_reader, configuration, leaveOpen: true);
     }
 
-    /// <summary>Opens the reader and reads the header row. A malformed header leaves <see cref="Header"/> null.</summary>
-    public static async Task<OrderCsvReader> OpenAsync(Stream stream)
+    /// <summary>
+    /// Opens the reader and reads the header row, matched by Numera's column names or, with a mapping, by the
+    /// mapping's source columns. A malformed header leaves <see cref="Header"/> null.
+    /// </summary>
+    public static async Task<OrderCsvReader> OpenAsync(Stream stream, ImportMapping? mapping = null)
     {
         var reader = new OrderCsvReader(stream);
         try
         {
             if (await reader._parser.ReadAsync() && reader._parser.Record is { } header)
             {
-                reader.Header = HeaderEvaluation.Evaluate(header);
+                reader.Header = mapping is null ? HeaderEvaluation.Evaluate(header) : HeaderEvaluation.FromMapping(header, mapping);
             }
         }
         catch (CsvHelperException)
@@ -112,6 +115,46 @@ public sealed class OrderCsvReader : IAsyncDisposable
                 yield return new CsvRecord(rowNumber, row, null, raw);
             }
         }
+    }
+
+    /// <summary>
+    /// Reads the header and at most <paramref name="maxRows"/> data rows as text, for a preview. Cells are cut to
+    /// <see cref="ImportPreviewLimits.MaxCellLength"/> characters. Returns null when the file has no readable header.
+    /// Rows that cannot be parsed end the sample early; the import reports them properly.
+    /// </summary>
+    public static async Task<(IReadOnlyList<string> Headers, IReadOnlyList<IReadOnlyList<string>> Rows)?> ReadSampleAsync(
+        Stream stream, int maxRows, CancellationToken ct = default)
+    {
+        await using var reader = new OrderCsvReader(stream);
+        var rows = new List<IReadOnlyList<string>>();
+        string[]? headers = null;
+        try
+        {
+            if (!await reader._parser.ReadAsync() || reader._parser.Record is not { } header)
+            {
+                return null;
+            }
+
+            headers = header.Select(h => Cut(HeaderEvaluation.Clean(h))).ToArray();
+            while (rows.Count < maxRows && await reader._parser.ReadAsync())
+            {
+                ct.ThrowIfCancellationRequested();
+                rows.Add(reader._parser.Record!.Select(Cut).ToArray());
+            }
+        }
+        catch (CsvHelperException)
+        {
+            // An unreadable header means no preview; an unreadable row just ends the sample.
+            if (headers is null)
+            {
+                return null;
+            }
+        }
+
+        return (headers, rows);
+
+        static string Cut(string? value) =>
+            value is null ? string.Empty : value.Length <= ImportPreviewLimits.MaxCellLength ? value : value[..ImportPreviewLimits.MaxCellLength] + "…";
     }
 
     /// <summary>
