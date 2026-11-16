@@ -530,4 +530,19 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - **Evaluation as a tool, not a test.** `tools/Numera.AskEval` (a console project in the solution, so CI compiles it) sends 20 questions with expected interpretations to the real model and prints pass/fail per question and the token usage. It needs a key and costs money, so it does not run in CI. The automated tests use a fake model client and cover validation, limits, errors and the "same figures as the dashboard" guarantee. This adds a `tools/` folder to the repository layout.
 - **Out of scope:** chat history and follow-up questions, free-text answers, questions outside the metrics (customers, products by SKU, forecasts, profit).
 
-_Add new decisions below as D062, D063, ..._
+## D062: Release 2.0
+
+- **Accessibility checks join CI.** axe-core (4.14.0) runs in the committed Playwright suite on every main screen and the version 2 states at 375, 768 and 1280 px, plus a check that nothing scrolls sideways. All five e2e tests take about 19 s locally, so the cost in CI is small. Version 1's checks were throwaway scripts (known issue since M11), so this closes that.
+- **The second e2e test resets the demo too**, like the first, leaving a shared demo as it was found. The reset rate limit (3 per 10 minutes per address) allows the two resets per run.
+- **No screenshot of the question box** in the README or video until it has been evaluated with a real key; showing a stubbed answer would suggest a tested feature. It is described as optional.
+- **The demo video stays outside the repository** (`projects/demos/numera`, with its captions and thumbnail), as for the other projects. The repository has screenshots only.
+- **Branches:** PRs #15 to #17 were merged into `main` instead of `dev`. `dev` was fast-forwarded to `main` (no history rewritten), so both branches held the same commits again before this milestone. Future PRs target `dev`; `main` changes only at a release.
+
+## D063: The demo video in the repository
+
+- The owner asked for the version 2 demo video in the README. It is now in the repository: `docs/demo/numera-demo.mp4` (4.5 MB, 59 s, 1920x1080) with a poster image `docs/demo/numera-demo-poster.png`. This replaces D062's "video outside the repository".
+- The README shows the poster linked to the file. GitHub opens a linked `.mp4` in its own player, which works in a repository README without uploading through the web editor, and the poster gives a visible play button.
+- The slide sources (frames, captions, thumbnail) stay in `projects/demos/numera`, outside the repository, as for the other projects. The version 1 videos there were deleted at the owner's request.
+- A new version of the video replaces this file rather than adding another, so the repository does not keep growing with old videos.
+
+_Add new decisions below as D064, D065, ..._
