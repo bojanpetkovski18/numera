@@ -26,15 +26,22 @@
   <p class="hint">.csv, up to 10 MB and 100,000 rows.</p>
   <p class="hint">
     <a href="sample-orders.csv" download>Download a sample CSV</a>
+    ·
+    <a href="sample-orders-mapped.csv" download>a sample with other column names</a>
   </p>
 </section>
 
 <details class="format">
   <summary>Expected format</summary>
   <p>
-    The first row must contain these column names (any order, any letter case):
+    Numera's own format has these column names in the first row (any order, any letter case):
     <code>order_id, order_date, customer_id, region, channel, product_sku, product_category, quantity, unit_price,
-    discount, status</code>.
+    discount, status</code>. A file like that is imported straight away.
+  </p>
+  <p>
+    A file with other column names, for example an export from a shop system, gets a mapping step first: you choose
+    which column holds each value, how dates are written (also <code>dd/MM/yyyy</code>, <code>MM/dd/yyyy</code> or
+    <code>dd.MM.yyyy</code>) and whether discounts are fractions or percentages. The rules below then apply as usual.
   </p>
   <ul>
     <li><strong>order_date</strong>: <code>yyyy-MM-dd</code>, not in the future</li>
@@ -52,6 +59,24 @@
 
 <div class="live" aria-live="polite">
   @switch (store.phase()) {
+    @case ('previewing') {
+      <section class="panel" aria-label="Reading the file">
+        <p><strong>Reading {{ store.fileName() }}…</strong> Checking its columns.</p>
+        <progress aria-label="Reading the file"></progress>
+      </section>
+    }
+    @case ('mapping') {
+      @if (store.preview(); as preview) {
+        <app-column-mapping
+          [preview]="preview"
+          [fileName]="store.fileName() ?? ''"
+          [busy]="store.savingMapping()"
+          [error]="store.mappingError()"
+          (confirm)="importMapped($event)"
+          (cancel)="store.cancelMapping()"
+        />
+      }
+    }
     @case ('uploading') {
       <section class="panel" aria-label="Upload progress">
         <p><strong>Uploading {{ store.fileName() }}…</strong> {{ store.progress() }}%</p>
@@ -192,3 +217,4 @@
     }
   }
 </section>
+<app-saved-mappings />
