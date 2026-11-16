@@ -469,4 +469,14 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - **The KPI cards say "vs last year"**; the full dates are shown once above the cards. The longer "same period last year" made every card wrap at desktop widths. The chart legend and data table, which have room, keep the full name.
 - The breakdown charts are not compared: explaining the change by group is M14's job.
 
-_Add new decisions below as D058, D059, ..._
+## D058: How "What changed?" explains a change
+
+- **Plain contribution, not a statistical decomposition.** Each group's contribution is simply its revenue now minus its revenue then. Splitting a change into "volume" and "price" effects, or a mix analysis, would be more than a small business owner needs and harder to check by hand. The contributions are exactly the difference of the two amounts shown next to them.
+- **One query over both periods**, unlike the summary (D057): the drivers have no "direct" request to stay identical to, and summing both date ranges with `FILTER` reads the data once. An automated test still checks that the totals equal the summary's and that each driver's rows in the grid add up to its revenue, in both periods.
+- **The summary sentence names the biggest mover in the same direction** as the total, so a fall is never "explained" by a group that grew. It is a fixed template filled from the response; no text is generated.
+- **Top five plus "N others"**: the demo has at most five groups per dimension, but imported data can have many, and a long list hides the point.
+- **Diverging bars in green and red** always come with a signed amount, so the colour is never the only signal. The bar is decoration (`aria-hidden`); the numbers carry the meaning.
+- **The selected tab is not in the URL**: it is a view on the same data, not part of the filter, so Back to the dashboard shows the Region tab again. It can be added to the URL if users ask for it.
+- `compare` is required on this endpoint (a 400 without it), unlike the summary, where it is optional.
+
+_Add new decisions below as D059, D060, ..._

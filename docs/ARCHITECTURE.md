@@ -142,6 +142,22 @@ Comparison series (timeseries `comparisonRevenue`, `comparisonOrders` on each po
 
 On the dashboard, "Compare to" in the filter bar sets `compare` (kept in the URL with the granularity; neither is sent to the orders grid or carried into a drill-down). It is disabled, with the reason shown, for "All time" and for custom ranges without both dates. The KPI cards show the change with an arrow, a sign and words for screen readers; green or red depends on whether the change is good (a rising refund rate is bad), so colour is never the only signal. A change that rounds to 0.0 is shown as no change. The revenue chart draws the comparison as a dashed, muted line, listed in a legend and in the data table; clicking a period still opens the current period's rows.
 
+## What changed? (revenue drivers)
+
+`GET /api/metrics/drivers?compare=previous|year&by=region|channel|category`, with the usual filters, explains the revenue change between the current and the comparison period by group (`DriverDefinitions` in `Numera.Application/Metrics`). `compare` and `by` are required, as are `from` and `to`.
+
+- **Current and comparison revenue** per group: completed revenue in each period, the rest of the filter applying to both. One SQL query reads both date ranges at once and sums them separately.
+- **Contribution** = the group's current revenue - its comparison revenue, from the two amounts rounded to the cent (so it is the difference of the two numbers shown). A group present in only one period counts as 0 in the other.
+- **Totals**: `currentRevenue`, `comparisonRevenue` and `change` equal the summary's revenue for each period and their difference; `relativeChange` equals the summary's `changes.revenue`. The contributions of one dimension add up to `change`, give or take a cent per group from rounding.
+- **Share of change** = contribution / change, to 4 decimals; null when the change is 0. It can be above 1 or negative: a group can grow more than the total when others fell.
+- **Order**: largest absolute contribution first, then by name. Groups with no completed revenue in either period are left out.
+
+The dashboard shows a "What changed?" panel below the KPI cards while a comparison is active:
+- A tab for each dimension (WAI-ARIA tabs, arrow keys).
+- A summary sentence built only from the response: the total change, then the group with the largest contribution in the same direction.
+- The top five groups with a diverging bar (increases to the right in green, decreases to the left in red, always with a signed amount), the rest summed as "N others".
+- Each group links to its completed lines in the orders grid for the current period, and a second link opens the same group in the comparison period.
+
 ## CSV export
 
 `GET /api/orders/export` returns every row `GET /api/orders` would return for the same filters, `status`, `q`, `sort` and `dir`, across all pages, in the same order (the two share `OrdersSql`).
