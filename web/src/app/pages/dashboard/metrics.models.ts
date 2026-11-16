@@ -90,3 +90,28 @@ export interface RevenueDrivers {
   /** Largest absolute contribution first. */
   readonly drivers: readonly Driver[];
 }
+
+export type AskMetric = 'revenue' | 'orders' | 'average_order_value' | 'refund_rate';
+export type AskView = 'total' | 'over_time' | 'by_dimension';
+
+/** The request a question was turned into, in the dashboard's terms. */
+export interface AskRequest {
+  readonly metric: AskMetric;
+  readonly view: AskView;
+  readonly granularity: Granularity | null;
+  readonly dimension: DriverDimension | null;
+  readonly from: string | null;
+  readonly to: string | null;
+  readonly regions: readonly string[];
+  readonly channels: readonly string[];
+  readonly categories: readonly string[];
+  readonly compare: 'none' | ComparisonModeName;
+}
+
+/** The answer: the request and its result (as the dashboard endpoints return it), or why it could not be answered. */
+export interface AskAnswer {
+  readonly status: 'answered' | 'cannot_answer';
+  readonly request: AskRequest | null;
+  readonly result: MetricsSummary | RevenueTimeseries | RevenueBreakdown | null;
+  readonly reason: string | null;
+}

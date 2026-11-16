@@ -24,6 +24,8 @@ numera/
   tests/
     Numera.UnitTests/
     Numera.IntegrationTests/
+  tools/
+    Numera.AskEval/          # manual evaluation of the question box against the real model (D061)
   web/                       # Angular app
   e2e/                       # Playwright
   docs/                      # SPEC.md, ARCHITECTURE.md, screenshots
@@ -52,6 +54,7 @@ Keep this layout unless a change is logged in `DECISIONS.md`. Fill in the exact 
 - Orders grid: `GET /api/orders` (same filters plus `status`, `q` for order ID contains-search, `sort` (column name), `dir=asc|desc`, `page`, `pageSize` up to 100)
 - Export the grid view as CSV: `GET /api/orders/export` (same parameters as `/api/orders` without paging; at most 100,000 rows, otherwise 422), for example `curl -o orders.csv -H "Authorization: Bearer <token>" "http://localhost:5080/api/orders/export?region=Europe&region=Asia-Pacific"`
 - Saved views and share links (M16): `/api/views` (list, create, `PUT`/`DELETE /{id}`), `POST /api/views/{id}/shares` with `{"expiresInDays": 1|7|30}` (returns the token once), `GET /api/shares`, `DELETE /api/shares/{id}`; public, no sign-in: `GET /api/shared/{token}` plus `/summary`, `/timeseries`, `/breakdown`, `/drivers`, and the page `/shared/{token}`
+- Ask in plain English (M17, optional): off unless `Ai__ApiKey` is set (Compose reads `ANTHROPIC_API_KEY` from `.env`); `GET /api/ask/status`, `POST /api/ask` with `{"question": "..."}`; limits `Ai__PerUserPerMinute` (5) and `Ai__DailyLimit` (200); model `Ai__Model` (default `claude-opus-5-5`). Evaluation against the real model (needs a key, costs money): `dotnet run --project tools/Numera.AskEval`
 - Filter choices for the UI: `GET /api/filter-options` (distinct regions, channels, categories and the data's date range)
 - Demo login: `demo@numera.example` / `Demo-Pass-2026!` (documented demo values; created by `migrate` and `seed`)
 - Reset the demo data through the API (signed in; same result as `seed`; 409 while an import runs; 3 per 10 minutes per client): `curl -X POST -H "Authorization: Bearer <token>" http://localhost:5080/api/demo/reset`, or Settings > Reset demo data in the web app

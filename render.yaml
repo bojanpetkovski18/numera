@@ -28,3 +28,9 @@ services:
         value: "true"
       - key: PORT
         value: "8080"
+      # Optional: questions in plain English (M17). Paste an Anthropic API key in Render to turn it on; empty keeps it off.
+      - key: Ai__ApiKey
+        sync: false
+      # Cost ceiling for the public demo: questions per day across all visitors.
+      - key: Ai__DailyLimit
+        value: "200"

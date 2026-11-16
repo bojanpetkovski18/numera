@@ -367,12 +367,13 @@ public class ImportMappingEndpointTests(PostgresFixture postgres) : IClassFixtur
         await using var api = await StartAsync();
         for (var i = 1; i <= 50; i++)
         {
-            Assert.Equal(HttpStatusCode.Created, (await api.Client.PostAsJsonAsync("/api/import-mappings", SaveBody($"Mapping {i}"))).StatusCode);
+            // ReadAsync reports the status and body on failure (this test failed once in a full run, not reproduced since).
+            await ReadAsync<Saved>(await api.Client.PostAsJsonAsync("/api/import-mappings", SaveBody($"Mapping {i}")), HttpStatusCode.Created);
         }
 
         var response = await api.Client.PostAsJsonAsync("/api/import-mappings", SaveBody("Mapping 51"));
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.True(response.StatusCode == HttpStatusCode.UnprocessableEntity, $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
     }
 
     [Fact]

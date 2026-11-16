@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Manual evaluation of "Ask in plain English" against the real model (M17). Needs an API key; not run in CI. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Numera.Infrastructure\Numera.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="questions.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

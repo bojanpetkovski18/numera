@@ -28,6 +28,8 @@ services:
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (at least 32 characters, see .env.example)}
       # Creates the schema and loads the demo data on the first start (an empty database only).
       Database__PrepareOnStartup: "true"
+      # Optional: questions in plain English (M17); empty keeps the feature off.
+      Ai__ApiKey: ${ANTHROPIC_API_KEY:-}
     ports:
       - "${WEB_PORT:-8080}:8080"
     depends_on:

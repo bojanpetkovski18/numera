@@ -7,10 +7,11 @@ import { KpiCards } from './kpi-cards';
 import { RevenueChart } from './revenue-chart';
 import { ViewsBar } from './views-bar';
 import { WhatChanged } from './what-changed';
+import { AskBox } from './ask-box';
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [BreakdownChart, FilterBar, KpiCards, RevenueChart, ViewsBar, WhatChanged],
+  imports: [AskBox, BreakdownChart, FilterBar, KpiCards, RevenueChart, ViewsBar, WhatChanged],
   template: `
     <header class="page-header">
       <h1>Dashboard</h1>
@@ -19,6 +20,7 @@ import { WhatChanged } from './what-changed';
     <app-views-bar class="views" />
 
     <div class="layout">
+      <app-ask-box />
       <app-filter-bar />
       <app-kpi-cards />
       @if (filters.compareParam()) {

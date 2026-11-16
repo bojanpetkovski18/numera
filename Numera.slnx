@@ -8,4 +8,7 @@
     <Project Path="tests/Numera.IntegrationTests/Numera.IntegrationTests.csproj" />
     <Project Path="tests/Numera.UnitTests/Numera.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Numera.AskEval/Numera.AskEval.csproj" />
+  </Folder>
 </Solution>
