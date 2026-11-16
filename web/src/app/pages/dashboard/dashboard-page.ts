@@ -5,16 +5,18 @@ import { FilterBar } from '../../shared/filters/filter-bar';
 import { BreakdownChart } from './breakdown-chart';
 import { KpiCards } from './kpi-cards';
 import { RevenueChart } from './revenue-chart';
+import { ViewsBar } from './views-bar';
 import { WhatChanged } from './what-changed';
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [BreakdownChart, FilterBar, KpiCards, RevenueChart, WhatChanged],
+  imports: [BreakdownChart, FilterBar, KpiCards, RevenueChart, ViewsBar, WhatChanged],
   template: `
     <header class="page-header">
       <h1>Dashboard</h1>
       <p>Sales performance for Harbor &amp; Pine Coffee. Revenue counts completed orders after discounts.</p>
     </header>
+    <app-views-bar class="views" />
 
     <div class="layout">
       <app-filter-bar />
@@ -38,8 +40,11 @@ import { WhatChanged } from './what-changed';
       font-size: var(--font-size-xl);
     }
     .page-header p {
-      margin: var(--space-2) 0 var(--space-5);
+      margin: var(--space-2) 0 var(--space-4);
       color: var(--color-muted);
+    }
+    .views {
+      margin-bottom: var(--space-4);
     }
     .layout {
       display: grid;

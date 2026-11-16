@@ -6,6 +6,12 @@ import { Shell } from './shell/shell';
 
 export const routes: Routes = [
   { path: 'login', component: LoginPage, title: 'Sign in · Numera' },
+  // Public: a saved view opened through a share link (the token is the only credential, checked by the API).
+  {
+    path: 'shared/:token',
+    loadComponent: () => import('./pages/shared/shared-page').then((m) => m.SharedPage),
+    title: 'Shared dashboard · Numera',
+  },
   {
     path: '',
     component: Shell,

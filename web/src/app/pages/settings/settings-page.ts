@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { formatInteger } from '../../core/format/format';
 import { problemMessage } from '../../core/http/problem';
 import { ImportStore } from '../import/import.store';
+import { SharedLinks } from './shared-links';
 
 interface DemoResetResponse {
   readonly orderLines: number;
@@ -18,17 +19,20 @@ type ResetState =
 
 @Component({
   selector: 'app-settings-page',
+  imports: [SharedLinks],
   template: `
     <header class="page-header">
       <h1>Settings</h1>
       <p>Options for this demo workspace.</p>
     </header>
 
+    <app-shared-links />
+
     <section class="card" aria-labelledby="reset-title">
       <h2 id="reset-title">Demo data</h2>
       <p>
-        Put the demo back the way it started. Imported orders and the import history are removed, and the original
-        200,000 fictional order lines are loaded again. It takes a few seconds, and everyone using the demo sees the
+        Put the demo back the way it started. Imported orders, the import history, saved column mappings, saved views
+        and their shared links are removed, and the original 200,000 fictional order lines are loaded again. It takes a few seconds, and everyone using the demo sees the
         result.
       </p>
       <!-- aria-disabled rather than disabled while busy, so keyboard focus stays on the button. -->
@@ -45,8 +49,8 @@ type ResetState =
     <dialog #dialog aria-labelledby="confirm-title" aria-describedby="confirm-text" (close)="dialogClosed()">
       <h2 id="confirm-title">Reset the demo data?</h2>
       <p id="confirm-text">
-        Imported orders and the import history will be deleted, and the original data loaded again. This cannot be
-        undone.
+        Imported orders, the import history, saved mappings, saved views and shared links will be deleted, and the
+        original data loaded again. This cannot be undone.
       </p>
       <div class="actions">
         <!-- Focus starts on Cancel: the safe choice for a destructive action. -->

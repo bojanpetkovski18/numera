@@ -39,6 +39,7 @@ describe('DashboardPage', () => {
 
   function flushAll(): void {
     for (const r of pending(http, '/api/filter-options')) r.flush(OPTIONS);
+    for (const r of pending(http, '/api/views')) r.flush([]);
     for (const r of pending(http, '/api/metrics/summary')) r.flush(SUMMARY);
     for (const r of pending(http, '/api/metrics/timeseries')) r.flush({ granularity: r.request.params.get('granularity'), points: POINTS });
     for (const r of pending(http, '/api/metrics/breakdown')) r.flush({ by: r.request.params.get('by'), groups: GROUPS });
