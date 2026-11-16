@@ -6,6 +6,10 @@
 
 Numera is an independent portfolio project by **Bojan Petkovski**, a full-stack developer (Angular, .NET, PostgreSQL), built **with AI assistance** (Claude). All data is fictional: an invented coffee roaster, "Harbor & Pine Coffee".
 
+[![Watch the 1-minute demo of Numera 2.0](docs/demo/numera-demo-poster.png)](docs/demo/numera-demo.mp4)
+
+**[Watch the 1-minute demo](docs/demo/numera-demo.mp4)** (59 seconds, no sound): comparing periods, seeing what changed, importing a shop export, and sharing a read-only view. Recorded from the running app; all data is fictional.
+
 ---
 
 ## What it does

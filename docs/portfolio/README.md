@@ -24,6 +24,8 @@ Upwork's limits differ between its help pages (title 40 or 70 characters, descri
 
 The version 1 texts (before comparison, mapping, sharing and questions) are in this file's history at tag `v1.0.0`.
 
+**Video, first:** `docs/demo/numera-demo.mp4` (59 s, 1920x1080, no sound). Caption: *Numera 2.0 in one minute: compare periods, see what changed, import a shop export, share a read-only view.* Thumbnail: `docs/demo/numera-demo-poster.png`.
+
 **Images, in this order, with captions:**
 
 1. `docs/screenshots/dashboard.png`: *Dashboard: revenue, orders, average order value and refund rate, revenue over time and by category and region. Every number is computed in the database from one set of definitions.*

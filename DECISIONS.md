@@ -538,4 +538,11 @@ Checked 2026-10-12 against provider docs and recent third-party summaries:
 - **The demo video stays outside the repository** (`projects/demos/numera`, with its captions and thumbnail), as for the other projects. The repository has screenshots only.
 - **Branches:** PRs #15 to #17 were merged into `main` instead of `dev`. `dev` was fast-forwarded to `main` (no history rewritten), so both branches held the same commits again before this milestone. Future PRs target `dev`; `main` changes only at a release.
 
-_Add new decisions below as D063, D064, ..._
+## D063: The demo video in the repository
+
+- The owner asked for the version 2 demo video in the README. It is now in the repository: `docs/demo/numera-demo.mp4` (4.5 MB, 59 s, 1920x1080) with a poster image `docs/demo/numera-demo-poster.png`. This replaces D062's "video outside the repository".
+- The README shows the poster linked to the file. GitHub opens a linked `.mp4` in its own player, which works in a repository README without uploading through the web editor, and the poster gives a visible play button.
+- The slide sources (frames, captions, thumbnail) stay in `projects/demos/numera`, outside the repository, as for the other projects. The version 1 videos there were deleted at the owner's request.
+- A new version of the video replaces this file rather than adding another, so the repository does not keep growing with old videos.
+
+_Add new decisions below as D064, D065, ..._
